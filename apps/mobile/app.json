@@ -1,0 +1,18 @@
+{
+  "expo": {
+    "name": "Skein",
+    "slug": "skein",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "skein",
+    "newArchEnabled": true,
+    "ios": {
+      "bundleIdentifier": "com.skein.app",
+      "supportsTablet": true
+    },
+    "android": {
+      "package": "com.skein.app"
+    },
+    "plugins": ["expo-router"]
+  }
+}

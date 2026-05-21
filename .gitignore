@@ -1,0 +1,25 @@
+# dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# builds
+dist/
+build/
+.expo/
+*.tsbuildinfo
+
+# Go
+backend/bin/
+*.exe
+
+# env
+.env
+.env.local
+.env.*.local
+
+# editors / OS
+.DS_Store
+*.swp
+.idea/
+.vscode/

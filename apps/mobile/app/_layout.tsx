@@ -1,0 +1,59 @@
+import 'react-native-get-random-values'
+import React from 'react'
+import { Stack as _Stack } from 'expo-router'
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const Stack = _Stack as any
+import { StatusBar } from 'expo-status-bar'
+import { SafeAreaProvider } from 'react-native-safe-area-context'
+import { GestureHandlerRootView } from 'react-native-gesture-handler'
+import { BottomSheetModalProvider } from '@gorhom/bottom-sheet'
+import { useFonts, Caprasimo_400Regular } from '@expo-google-fonts/caprasimo'
+import { DMSans_400Regular, DMSans_500Medium, DMSans_600SemiBold } from '@expo-google-fonts/dm-sans'
+import { DMMono_400Regular } from '@expo-google-fonts/dm-mono'
+import * as SplashScreen from 'expo-splash-screen'
+import { ThemeProvider } from '../src/theme/ThemeContext'
+import { useSettingsStore } from '../src/store/settingsStore'
+
+SplashScreen.preventAutoHideAsync()
+
+function RootLayout() {
+  const theme = useSettingsStore((s) => s.theme)
+
+  const [fontsLoaded] = useFonts({
+    Caprasimo_400Regular,
+    DMSans_400Regular,
+    DMSans_500Medium,
+    DMSans_600SemiBold,
+    DMMono_400Regular,
+  })
+
+  React.useEffect(() => {
+    if (fontsLoaded) SplashScreen.hideAsync()
+  }, [fontsLoaded])
+
+  if (!fontsLoaded) return null
+
+  return (
+    <ThemeProvider theme={theme}>
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="index"/>
+        <Stack.Screen name="(tabs)"/>
+        <Stack.Screen name="setup/index" options={{ animation: 'slide_from_bottom' }}/>
+        <Stack.Screen name="project/[id]" options={{ animation: 'slide_from_right' }}/>
+      </Stack>
+      <StatusBar style={theme === 'dark' ? 'light' : 'dark'}/>
+    </ThemeProvider>
+  )
+}
+
+export default function Layout() {
+  return (
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <SafeAreaProvider>
+        <BottomSheetModalProvider>
+          <RootLayout/>
+        </BottomSheetModalProvider>
+      </SafeAreaProvider>
+    </GestureHandlerRootView>
+  )
+}
