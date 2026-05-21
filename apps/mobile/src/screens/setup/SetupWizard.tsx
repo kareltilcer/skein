@@ -561,28 +561,34 @@ function Step2({draft, onChange}: { draft: Draft; onChange: (d: Draft) => void }
 function Step3({draft, onChange}: { draft: Draft; onChange: (d: Draft) => void }) {
     const {colors, fonts, fontSize, spacing, radius} = useTheme()
     const [activePart, setActivePart] = useState(0)
-    const [showStitchPicker, setShowStitchPicker] = useState<{
-        partIdx: number;
-        seqIdx: number;
-        rowIdx: number
-    } | null>(null)
+    const [activeRow, setActiveRow] = useState<{partIdx: number; seqIdx: number; rowIdx: number} | null>(null)
+    const [showFullPicker, setShowFullPicker] = useState(false)
 
     const part = draft.parts[activePart]
+    const quickStitches = STITCHES.filter(s => s.type === draft.craft).slice(0, 6)
+    const totalStitchCount = STITCHES.filter(s => s.type === draft.craft).length
 
     const addRow = (seqIdx: number) => {
         const seq = part!.sequences[seqIdx]!
         const newRow: DraftRow = {id: uuid4(), label: `Row ${seq.rows.length + 1}`, stitches: []}
-        const updatedSeq = {...seq, rows: [...seq.rows, newRow]}
-        updateSeq(activePart, seqIdx, updatedSeq)
+        updateSeq(activePart, seqIdx, {...seq, rows: [...seq.rows, newRow]})
+    }
+
+    const removeRow = (seqIdx: number, rowIdx: number) => {
+        const seq = part!.sequences[seqIdx]!
+        updateSeq(activePart, seqIdx, {...seq, rows: seq.rows.filter((_, i) => i !== rowIdx)})
+        if (activeRow?.seqIdx === seqIdx && activeRow?.rowIdx === rowIdx) setActiveRow(null)
+    }
+
+    const clearRow = (seqIdx: number, rowIdx: number) => {
+        const seq = part!.sequences[seqIdx]!
+        updateSeq(activePart, seqIdx, {...seq, rows: seq.rows.map((r, i) => i === rowIdx ? {...r, stitches: []} : r)})
     }
 
     const addSeq = () => {
         const newSeq: DraftSequence = {
-            id: uuid4(),
-            name: `Sequence ${part!.sequences.length + 1}`,
-            rows: [],
-            totalRepeats: 1,
-            loop: false
+            id: uuid4(), name: `Sequence ${part!.sequences.length + 1}`,
+            rows: [], totalRepeats: 1, loop: false,
         }
         const updatedPart = {...part!, sequences: [...part!.sequences, newSeq]}
         onChange({...draft, parts: draft.parts.map((p, i) => i === activePart ? updatedPart : p)})
@@ -599,168 +605,223 @@ function Step3({draft, onChange}: { draft: Draft; onChange: (d: Draft) => void }
     const addStitchToRow = (partIdx: number, seqIdx: number, rowIdx: number, stitchId: string) => {
         const row = draft.parts[partIdx]!.sequences[seqIdx]!.rows[rowIdx]!
         const last = row.stitches[row.stitches.length - 1]
-        let newStitches: StitchInstance[]
-        if (last && last.stitchId === stitchId) {
-            newStitches = [...row.stitches.slice(0, -1), {stitchId, count: last.count + 1}]
-        } else {
-            newStitches = [...row.stitches, {stitchId, count: 1}]
-        }
-        const updatedRow = {...row, stitches: newStitches}
+        const newStitches: StitchInstance[] =
+            last && last.stitchId === stitchId
+                ? [...row.stitches.slice(0, -1), {stitchId, count: last.count + 1}]
+                : [...row.stitches, {stitchId, count: 1}]
         const seq = draft.parts[partIdx]!.sequences[seqIdx]!
-        const updatedSeq = {...seq, rows: seq.rows.map((r, i) => i === rowIdx ? updatedRow : r)}
-        updateSeq(partIdx, seqIdx, updatedSeq)
+        updateSeq(partIdx, seqIdx, {...seq, rows: seq.rows.map((r, i) => i === rowIdx ? {...r, stitches: newStitches} : r)})
     }
 
     if (!part) return null
 
+    const dockVisible = activeRow !== null && !showFullPicker
+
     return (
-        <ScrollView contentContainerStyle={{padding: spacing[4], gap: spacing[4], paddingBottom: 140}}>
-            {/* Part tabs */}
-            {draft.parts.length > 1 && (
-                <View style={[styles.tabRow2, {backgroundColor: colors.cream2, borderRadius: radius.md}]}>
-                    {draft.parts.map((p, i) => (
-                        <Pressable
-                            key={p.id}
-                            onPress={() => setActivePart(i)}
-                            style={[styles.tabBtn2, {
-                                backgroundColor: activePart === i ? colors.card : 'transparent',
-                                borderRadius: radius.sm
-                            }]}
-                        >
-                            <Text style={{
-                                fontFamily: fonts.bodySb,
-                                fontSize: 12,
-                                color: activePart === i ? colors.brick : colors.inkSoft
-                            }}>
-                                {p.name}
-                            </Text>
-                        </Pressable>
-                    ))}
-                </View>
-            )}
+        <View style={{flex: 1}}>
+            <ScrollView contentContainerStyle={{padding: spacing[4], paddingBottom: dockVisible ? 240 : 140}}>
+                {/* Part tabs */}
+                {draft.parts.length > 1 && (
+                    <View style={[styles.tabRow2, {backgroundColor: colors.cream2, borderRadius: radius.md, marginBottom: spacing[4]}]}>
+                        {draft.parts.map((p, i) => (
+                            <Pressable
+                                key={p.id}
+                                onPress={() => { setActivePart(i); setActiveRow(null) }}
+                                style={[styles.tabBtn2, {backgroundColor: activePart === i ? colors.card : 'transparent', borderRadius: radius.sm}]}
+                            >
+                                <Text style={{fontFamily: fonts.bodySb, fontSize: 12, color: activePart === i ? colors.brick : colors.inkSoft}}>
+                                    {p.name}
+                                </Text>
+                            </Pressable>
+                        ))}
+                    </View>
+                )}
 
-            {part.sequences.map((seq, si) => (
-                <View key={seq.id} style={[styles.seqBlock, {
-                    backgroundColor: colors.card,
-                    borderColor: colors.rule,
-                    borderRadius: radius.lg
-                }]}>
-                    <TextInput
-                        value={seq.name}
-                        onChangeText={(t) => updateSeq(activePart, si, {...seq, name: t})}
-                        style={{
-                            fontFamily: fonts.bodySb,
-                            fontSize: fontSize.base,
-                            color: colors.ink,
-                            paddingBottom: 8,
-                            borderBottomWidth: 1,
-                            borderBottomColor: colors.rule
-                        }}
-                    />
-
-                    {seq.rows.map((row, ri) => {
-                        const isActiveRow = showStitchPicker?.partIdx === activePart && showStitchPicker?.seqIdx === si && showStitchPicker?.rowIdx === ri
-                        return (
-                        <View key={row.id} style={[styles.rowCard, {
-                            borderColor: isActiveRow ? colors.mustard : colors.rule,
-                            backgroundColor: isActiveRow ? colors.mustard + '18' : 'transparent',
-                            borderRadius: isActiveRow ? 8 : 0,
-                            marginHorizontal: isActiveRow ? -6 : 0,
-                            paddingHorizontal: isActiveRow ? 6 : 0,
-                            paddingBottom: 12,
-                        }]}>
-                            <Text style={{
-                                fontFamily: fonts.mono,
-                                fontSize: 10,
-                                color: colors.inkMute,
-                                letterSpacing: 1.5,
-                                textTransform: 'uppercase',
-                                marginBottom: 6
-                            }}>
-                                Row {ri + 1}
-                            </Text>
-                            <View style={styles.stitchFlow}>
-                                {row.stitches.map((si_item, idx) => {
-                                    const def = STITCH_MAP[si_item.stitchId]
-                                    if (!def) return null
-                                    return (
-                                        <View key={idx}
-                                              style={[styles.miniChip2, {backgroundColor: def.color, borderRadius: 8}]}>
-                                            <StitchGlyph symbol={def.symbol} size={16} color="#2B1810"/>
-                                            <Text style={{
-                                                fontFamily: fonts.mono,
-                                                fontSize: 9,
-                                                color: '#2B1810',
-                                                fontWeight: '700'
-                                            }}>
-                                                {si_item.count > 1 ? `${def.abbr}×${si_item.count}` : def.abbr}
-                                            </Text>
-                                        </View>
-                                    )
-                                })}
-                                <Pressable
-                                    onPress={() => setShowStitchPicker({partIdx: activePart, seqIdx: si, rowIdx: ri})}
-                                    style={[styles.addStitchBtn, {
-                                        borderColor: colors.rule,
-                                        borderRadius: 8,
-                                        backgroundColor: colors.bg
-                                    }]}
-                                >
-                                    <Icon name="plus" size={14} color={colors.inkSoft}/>
-                                </Pressable>
-                            </View>
+                {part.sequences.map((seq, si) => (
+                    <View key={seq.id} style={{marginBottom: spacing[5]}}>
+                        {/* Sequence name — full card with brick border */}
+                        <View style={{
+                            backgroundColor: colors.card,
+                            borderWidth: 2, borderColor: colors.brick, borderRadius: 16,
+                            paddingVertical: 14, paddingHorizontal: 16, marginBottom: 16,
+                        }}>
+                            <TextInput
+                                value={seq.name}
+                                onChangeText={(t) => updateSeq(activePart, si, {...seq, name: t})}
+                                style={{fontFamily: fonts.display, fontSize: 22, color: colors.ink, letterSpacing: -0.5}}
+                            />
                         </View>
-                    )})}
 
-                    <Pressable onPress={() => addRow(si)} style={[styles.addRowBtn, {borderColor: colors.rule}]}>
-                        <Icon name="plus" size={13} color={colors.inkMute}/>
-                        <Text style={{fontFamily: fonts.body, fontSize: 13, color: colors.inkMute}}>Add row</Text>
-                    </Pressable>
-                </View>
-            ))}
+                        {/* Rows header */}
+                        <View style={{flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 8}}>
+                            <Text style={{fontFamily: fonts.mono, fontSize: 11, color: colors.inkMute, letterSpacing: 2, textTransform: 'uppercase'}}>
+                                Rows · {seq.rows.length} total
+                            </Text>
+                            <Text style={{fontFamily: fonts.mono, fontSize: 10, color: colors.inkMute, letterSpacing: 0.5}}>
+                                tap a row to focus
+                            </Text>
+                        </View>
 
-            <Pressable onPress={addSeq}
-                       style={[styles.addPartBtn, {borderColor: colors.brick, borderRadius: radius.md}]}>
-                <Icon name="plus" size={14} color={colors.brick}/>
-                <Text style={{fontFamily: fonts.bodySb, fontSize: 13, color: colors.brick}}>Add sequence</Text>
-            </Pressable>
+                        {/* Row cards */}
+                        <View style={{gap: 8}}>
+                            {seq.rows.map((row, ri) => {
+                                const isActive = activeRow?.partIdx === activePart && activeRow?.seqIdx === si && activeRow?.rowIdx === ri
+                                const totalSts = row.stitches.reduce((sum, s) => sum + s.count, 0)
+                                const empty = totalSts === 0
+                                return (
+                                    <Pressable
+                                        key={row.id}
+                                        onPress={() => { setActiveRow({partIdx: activePart, seqIdx: si, rowIdx: ri}); setShowFullPicker(false) }}
+                                        style={{
+                                            backgroundColor: colors.card,
+                                            borderWidth: isActive ? 2 : 1,
+                                            borderColor: isActive ? colors.brick : colors.rule,
+                                            borderRadius: 14,
+                                            paddingVertical: 10, paddingHorizontal: 12,
+                                        }}
+                                    >
+                                        {/* Row header row */}
+                                        <View style={{flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: empty ? 0 : 8, gap: 8}}>
+                                            <View style={{flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1}}>
+                                                <Icon name="grip" size={14} color={colors.inkMute}/>
+                                                <Text style={{fontFamily: fonts.bodySb, fontSize: 13, color: isActive ? colors.brick : colors.ink}}>
+                                                    {row.label}{isActive ? ' ✱' : ''}
+                                                </Text>
+                                                <Text style={{fontFamily: fonts.mono, fontSize: 10, color: colors.inkMute}}>
+                                                    · {totalSts} sts
+                                                </Text>
+                                            </View>
+                                            <View style={{flexDirection: 'row', alignItems: 'center', gap: 10, flexShrink: 0}}>
+                                                <Pressable onPress={() => clearRow(si, ri)}>
+                                                    <Icon name="refresh" size={14} color={colors.inkMute}/>
+                                                </Pressable>
+                                                <Pressable onPress={() => removeRow(si, ri)}>
+                                                    <Icon name="trash" size={14} color={colors.inkMute}/>
+                                                </Pressable>
+                                            </View>
+                                        </View>
+                                        {/* Stitch cells */}
+                                        {!empty ? (
+                                            <View style={{flexDirection: 'row', flexWrap: 'wrap', gap: 3}}>
+                                                {row.stitches.flatMap((si_item, idx) => {
+                                                    const def = STITCH_MAP[si_item.stitchId]
+                                                    if (!def) return []
+                                                    return Array.from({length: si_item.count}, (_, i) => (
+                                                        <View key={`${idx}-${i}`} style={{
+                                                            width: 22, height: 26, borderRadius: 6,
+                                                            backgroundColor: colors.cream2,
+                                                            borderWidth: 1.2, borderColor: def.color,
+                                                            alignItems: 'center', justifyContent: 'center',
+                                                        }}>
+                                                            <StitchGlyph symbol={def.symbol} size={12} color={def.color}/>
+                                                        </View>
+                                                    ))
+                                                })}
+                                            </View>
+                                        ) : (
+                                            <Text style={{fontFamily: fonts.mono, fontSize: 11, color: colors.inkMute, fontStyle: 'italic', paddingTop: 6, paddingBottom: 2}}>
+                                                empty · tap a stitch below to start filling
+                                            </Text>
+                                        )}
+                                    </Pressable>
+                                )
+                            })}
+                        </View>
 
-            {/* Inline stitch picker panel */}
-            {showStitchPicker && (
-                <View style={[styles.stitchPickerPanel, {
-                    backgroundColor: colors.card,
-                    borderColor: colors.rule,
-                    borderRadius: radius.lg
-                }]}>
-                    <View style={styles.pickerHeader}>
-                        <Text style={{fontFamily: fonts.bodySb, fontSize: fontSize.base, color: colors.ink}}>Pick a
-                            stitch</Text>
-                        <Pressable onPress={() => setShowStitchPicker(null)}>
-                            <Icon name="x" size={18} color={colors.inkMute}/>
+                        {/* Add row — split ReuseChooser */}
+                        <View style={{flexDirection: 'row', gap: 8, marginTop: 8}}>
+                            <Pressable
+                                onPress={() => addRow(si)}
+                                style={{flex: 1.1, borderWidth: 1.5, borderStyle: 'dashed', borderColor: colors.brick, borderRadius: 14, paddingVertical: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6}}
+                            >
+                                <Icon name="plus" size={14} color={colors.brick}/>
+                                <Text style={{fontFamily: fonts.bodySb, fontSize: 13, color: colors.brick}}>New row</Text>
+                            </Pressable>
+                            <Pressable style={{flex: 1, borderWidth: 1, borderColor: colors.rule, backgroundColor: colors.card, borderRadius: 14, paddingVertical: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6}}>
+                                <Icon name="library" size={14} color={colors.mustardDk}/>
+                                <Text style={{fontFamily: fonts.bodySb, fontSize: 13, color: colors.ink}}>From library</Text>
+                                <View style={{backgroundColor: colors.cream2, borderRadius: 6, paddingHorizontal: 6, paddingVertical: 1}}>
+                                    <Text style={{fontFamily: fonts.mono, fontSize: 10, color: colors.inkMute, fontWeight: '700', letterSpacing: 0.5}}>28</Text>
+                                </View>
+                            </Pressable>
+                        </View>
+
+                        {/* Tip */}
+                        <View style={{marginTop: 14, paddingVertical: 10, paddingHorizontal: 12, backgroundColor: colors.cream2, borderRadius: 12, flexDirection: 'row', gap: 8, alignItems: 'flex-start'}}>
+                            <Icon name="bulb" size={14} color={colors.mustardDk}/>
+                            <Text style={{fontFamily: fonts.body, fontSize: 12, color: colors.inkSoft, flex: 1, lineHeight: 18}}>
+                                <Text style={{fontWeight: '700', color: colors.ink}}>Tip: </Text>
+                                Long-press a row to duplicate it — copy-paste your way through a pattern.
+                            </Text>
+                        </View>
+                    </View>
+                ))}
+
+                <Pressable onPress={addSeq} style={[styles.addPartBtn, {borderColor: colors.brick, borderRadius: radius.md}]}>
+                    <Icon name="plus" size={14} color={colors.brick}/>
+                    <Text style={{fontFamily: fonts.bodySb, fontSize: 13, color: colors.brick}}>Add sequence</Text>
+                </Pressable>
+
+                {/* Full stitch picker (via "All N stitches →") */}
+                {showFullPicker && activeRow && (
+                    <View style={[styles.stitchPickerPanel, {backgroundColor: colors.card, borderColor: colors.rule, borderRadius: radius.lg, marginTop: spacing[3]}]}>
+                        <View style={styles.pickerHeader}>
+                            <Text style={{fontFamily: fonts.bodySb, fontSize: fontSize.base, color: colors.ink}}>Pick a stitch</Text>
+                            <Pressable onPress={() => setShowFullPicker(false)}>
+                                <Icon name="x" size={18} color={colors.inkMute}/>
+                            </Pressable>
+                        </View>
+                        <View style={styles.stitchGrid}>
+                            {STITCHES.filter(s => s.type === draft.craft).map(s => (
+                                <Pressable
+                                    key={s.id}
+                                    onPress={() => addStitchToRow(activeRow.partIdx, activeRow.seqIdx, activeRow.rowIdx, s.id)}
+                                    style={[styles.stitchPickerChip, {backgroundColor: s.color, borderRadius: 10}]}
+                                >
+                                    <StitchGlyph symbol={s.symbol} size={20} color="#2B1810"/>
+                                    <Text style={{fontFamily: fonts.mono, fontSize: 9, color: '#2B1810', fontWeight: '700'}}>{s.abbr}</Text>
+                                </Pressable>
+                            ))}
+                        </View>
+                    </View>
+                )}
+            </ScrollView>
+
+            {/* Stitch dock — pinned above wizard footer */}
+            {dockVisible && (
+                <View style={{
+                    position: 'absolute', bottom: 0, left: 0, right: 0,
+                    backgroundColor: colors.bg, borderTopWidth: 1, borderTopColor: colors.rule,
+                    paddingTop: 10, paddingBottom: 10, paddingHorizontal: 20,
+                }}>
+                    <View style={{flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8}}>
+                        <Text style={{fontFamily: fonts.mono, fontSize: 10, color: colors.brick, fontWeight: '700', letterSpacing: 2, textTransform: 'uppercase'}}>
+                            Tap to add to Row {activeRow!.rowIdx + 1} ✱
+                        </Text>
+                        <Pressable onPress={() => setShowFullPicker(true)} style={{flexDirection: 'row', alignItems: 'center', gap: 4}}>
+                            <Text style={{fontFamily: fonts.mono, fontSize: 11, color: colors.brick, fontWeight: '700'}}>
+                                All {totalStitchCount} stitches
+                            </Text>
+                            <Icon name="chevR" size={12} color={colors.brick}/>
                         </Pressable>
                     </View>
-                    <View style={styles.stitchGrid}>
-                        {STITCHES.filter((s) => s.type === draft.craft).map((s) => (
+                    <View style={{flexDirection: 'row', gap: 6}}>
+                        {quickStitches.map(s => (
                             <Pressable
                                 key={s.id}
-                                onPress={() => {
-                                    addStitchToRow(showStitchPicker.partIdx, showStitchPicker.seqIdx, showStitchPicker.rowIdx, s.id)
-                                }}
-                                style={[styles.stitchPickerChip, {backgroundColor: s.color, borderRadius: 10}]}
+                                onPress={() => addStitchToRow(activeRow!.partIdx, activeRow!.seqIdx, activeRow!.rowIdx, s.id)}
+                                style={{flex: 1, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.rule, borderRadius: 10, paddingVertical: 6, alignItems: 'center', gap: 3}}
                             >
-                                <StitchGlyph symbol={s.symbol} size={20} color="#2B1810"/>
-                                <Text style={{
-                                    fontFamily: fonts.mono,
-                                    fontSize: 9,
-                                    color: '#2B1810',
-                                    fontWeight: '700'
-                                }}>{s.abbr}</Text>
+                                <View style={{width: 28, height: 28, borderRadius: 8, backgroundColor: s.color, alignItems: 'center', justifyContent: 'center'}}>
+                                    <StitchGlyph symbol={s.symbol} size={16} color="#2B1810"/>
+                                </View>
+                                <Text style={{fontSize: 9.5, fontFamily: fonts.mono, color: colors.inkSoft, fontWeight: '700'}}>{s.abbr}</Text>
                             </Pressable>
                         ))}
                     </View>
                 </View>
             )}
-        </ScrollView>
+        </View>
     )
 }
 
@@ -933,7 +994,7 @@ export default function SetupWizard() {
             title: 'Break it into parts.',
             sub: 'Body, sleeves, collar — whatever makes sense for your project.'
         },
-        {label: 'Step 3 of 4', title: 'Build your sequences.', sub: 'Add rows and stitches to each part.'},
+        {label: 'Step 3 of 4', title: 'Build a sequence.', sub: 'Name it, add rows, tap stitches below to fill the active row.'},
         {label: 'Step 4 of 4', title: 'Arrange & repeat.', sub: 'Set how many times each sequence repeats.'},
     ]
 
