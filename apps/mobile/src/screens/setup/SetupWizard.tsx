@@ -1,4 +1,4 @@
-import React, {useState} from 'react'
+import React, {useState, useRef, forwardRef, useImperativeHandle} from 'react'
 import {View, Text, ScrollView, TextInput, Pressable, StyleSheet} from 'react-native'
 
 import {useRouter} from 'expo-router'
@@ -108,35 +108,111 @@ function WizardSteps({step}: { step: number }) {
 }
 
 // ── Step 1 ─────────────────────────────────────────────────────
-function Step1({draft, onChange}: { draft: Draft; onChange: (d: Draft) => void }) {
+type Step1Handle = { scrollToRequired: () => void }
+
+const Step1 = forwardRef<Step1Handle, {
+    draft: Draft; onChange: (d: Draft) => void; requiredError?: boolean
+}>(function Step1({draft, onChange, requiredError = false}, ref) {
     const {colors, fonts, fontSize, spacing, radius} = useTheme()
+    const scrollRef = useRef<ScrollView>(null)
+    const nameY = useRef(0)
     const len = draft.name.length
     const ratio = Math.min(1, len / MAX_NAME)
 
+    useImperativeHandle(ref, () => ({
+        scrollToRequired() {
+            scrollRef.current?.scrollTo({y: Math.max(0, nameY.current - 24), animated: true})
+        },
+    }))
+
+    const state =
+        requiredError && len === 0 ? 'required' :
+        len === 0 ? 'empty' :
+        len === MAX_NAME ? 'over' :
+        len >= MAX_NAME - 5 ? 'near' :
+        len >= 35 ? 'mid' : 'ok'
+
+    const stateColor =
+        state === 'required' || state === 'over' ? colors.brick :
+        state === 'near' ? colors.brickDk :
+        state === 'mid' ? colors.mustardDk : colors.forest
+
+    const stateMsg: Record<string, string> = {
+        empty:    'Give it a name — anything will do.',
+        ok:       'Looks good. Future-you will thank you.',
+        mid:      'Plenty of room.',
+        near:     'Getting close to the limit.',
+        over:     'Whoops — too long. I have to stop you.',
+        required: "This one's required — give your project a name to cast on.",
+    }
+
+    const isErr = state === 'required'
+
     return (
-        <ScrollView contentContainerStyle={{padding: spacing[5], gap: spacing[5], paddingBottom: 140}}>
+        <ScrollView ref={scrollRef} contentContainerStyle={{padding: spacing[5], gap: spacing[5], paddingBottom: 140}}>
             {/* Name */}
-            <View>
-                <Text style={[styles.sectionLabel, {color: colors.inkMute, fontFamily: fonts.mono}]}>Name your
-                    project</Text>
+            <View onLayout={(e) => { nameY.current = e.nativeEvent.layout.y }}>
+                <View style={{flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8}}>
+                    <Text style={[styles.sectionLabel, {color: colors.inkMute, fontFamily: fonts.mono}]}>
+                        Name your project
+                    </Text>
+                    {isErr && (
+                        <View style={{
+                            flexDirection: 'row', alignItems: 'center', gap: 4,
+                            backgroundColor: colors.brick, borderRadius: 6,
+                            paddingHorizontal: 6, paddingVertical: 2,
+                        }}>
+                            <Text style={{fontSize: 11, color: '#FBF6EC', lineHeight: 11}}>✱</Text>
+                            <Text style={{
+                                fontFamily: fonts.mono, fontSize: 9.5, fontWeight: '700',
+                                color: '#FBF6EC', letterSpacing: 2,
+                            }}>REQUIRED</Text>
+                        </View>
+                    )}
+                </View>
                 <View style={[styles.nameBox, {
-                    backgroundColor: colors.card,
+                    backgroundColor: isErr ? '#FBEFEA' : colors.card,
                     borderColor: colors.brick,
-                    borderRadius: radius.lg
+                    borderWidth: isErr ? 2.5 : 2,
+                    borderRadius: radius.lg,
+                    ...(isErr ? {
+                        shadowColor: colors.brick,
+                        shadowOffset: {width: 0, height: 0},
+                        shadowOpacity: 0.12,
+                        shadowRadius: 8,
+                    } : {}),
                 }]}>
                     <TextInput
                         value={draft.name}
-                        onChangeText={(t) => onChange({...draft, name: t.slice(0, MAX_NAME + 8)})}
+                        onChangeText={(t) => onChange({...draft, name: t.slice(0, MAX_NAME)})}
                         placeholder="e.g. The Granny Cardigan"
                         placeholderTextColor={colors.inkMute}
                         style={{
                             fontFamily: fonts.display,
                             fontSize: fontSize['2xl'],
                             color: colors.ink,
-                            letterSpacing: -0.5
+                            letterSpacing: -0.5,
+                            paddingRight: isErr ? 36 : 0,
                         }}
                         autoFocus
                     />
+                    {isErr && (
+                        <View style={{
+                            position: 'absolute', top: 14, right: 14,
+                            width: 26, height: 26, borderRadius: 13,
+                            backgroundColor: colors.brick,
+                            alignItems: 'center', justifyContent: 'center',
+                            shadowColor: colors.brick,
+                            shadowOffset: {width: 0, height: 2},
+                            shadowOpacity: 0.35,
+                            shadowRadius: 6,
+                        }}>
+                            <Text style={{
+                                fontFamily: fonts.display, fontSize: 17,
+                                color: '#FBF6EC', lineHeight: 20,
+                            }}>!</Text>
+                        </View>
+                    )}
                 </View>
                 <View style={styles.nameMeta}>
                     <View style={{
@@ -149,12 +225,36 @@ function Step1({draft, onChange}: { draft: Draft; onChange: (d: Draft) => void }
                         <View style={{
                             width: `${Math.min(100, ratio * 100)}%`,
                             height: 4,
-                            backgroundColor: colors.brick,
+                            backgroundColor: stateColor,
                             borderRadius: 99
                         }}/>
                     </View>
-                    <Text
-                        style={{fontFamily: fonts.mono, fontSize: 11, color: colors.inkMute}}>{len} / {MAX_NAME}</Text>
+                    <Text style={{
+                        fontFamily: fonts.mono, fontSize: 11,
+                        color: stateColor,
+                        fontWeight: isErr ? '700' : '400',
+                    }}>{len} / {MAX_NAME}</Text>
+                </View>
+                <View style={{flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 6}}>
+                    {isErr && (
+                        <View style={{
+                            width: 13, height: 13, borderRadius: 99,
+                            backgroundColor: colors.brick,
+                            alignItems: 'center', justifyContent: 'center',
+                        }}>
+                            <Text style={{fontSize: 10, fontWeight: '700', color: '#FBF6EC', lineHeight: 13}}>!</Text>
+                        </View>
+                    )}
+                    {(state === 'over' || state === 'near') && (
+                        <Icon name="bulb" size={12} color={stateColor}/>
+                    )}
+                    <Text style={{
+                        fontFamily: fonts.mono, fontSize: 10.5,
+                        color: (state === 'over' || state === 'near' || isErr) ? stateColor : colors.inkMute,
+                        fontWeight: isErr ? '700' : '400',
+                        letterSpacing: 0.5,
+                        flex: 1,
+                    }}>{stateMsg[state]}</Text>
                 </View>
             </View>
 
@@ -385,7 +485,7 @@ function Step1({draft, onChange}: { draft: Draft; onChange: (d: Draft) => void }
             </View>
         </ScrollView>
     )
-}
+})
 
 // ── Step 2 ─────────────────────────────────────────────────────
 function Step2({draft, onChange}: { draft: Draft; onChange: (d: Draft) => void }) {
@@ -786,13 +886,15 @@ function Step4({draft, onChange}: { draft: Draft; onChange: (d: Draft) => void }
 
 // ── Root wizard ─────────────────────────────────────────────────
 export default function SetupWizard() {
-    const {colors, fonts, spacing} = useTheme()
+    const {colors, fonts, spacing, radius} = useTheme()
     const router = useRouter()
     const defaultCraft = useSettingsStore((s) => s.defaultCraft)
     const markWelcomeSeen = useSettingsStore((s) => s.markWelcomeSeen)
     const addProject = useProjectStore((s) => s.addProject)
 
     const [step, setStep] = useState(0)
+    const [triedNext, setTriedNext] = useState(false)
+    const step1Ref = useRef<Step1Handle>(null)
     const [draft, setDraft] = useState<Draft>({
         name: '',
         craft: defaultCraft,
@@ -827,9 +929,14 @@ export default function SetupWizard() {
         {label: 'Step 4 of 4', title: 'Arrange & repeat.', sub: 'Set how many times each sequence repeats.'},
     ]
 
-    const canProceed = step === 0 ? draft.name.trim().length > 0 : true
+    const blocked = step === 0 && triedNext && !draft.name.trim()
 
     const next = () => {
+        if (step === 0 && !draft.name.trim()) {
+            setTriedNext(true)
+            step1Ref.current?.scrollToRequired()
+            return
+        }
         if (step < 3) setStep(step + 1)
         else finish()
     }
@@ -907,7 +1014,7 @@ export default function SetupWizard() {
 
             {/* Step content */}
             <View style={{flex: 1}}>
-                {step === 0 && <Step1 draft={draft} onChange={setDraft}/>}
+                {step === 0 && <Step1 ref={step1Ref} draft={draft} onChange={setDraft} requiredError={triedNext && !draft.name.trim()}/>}
                 {step === 1 && <Step2 draft={draft} onChange={setDraft}/>}
                 {step === 2 && <Step3 draft={draft} onChange={setDraft}/>}
                 {step === 3 && <Step4 draft={draft} onChange={setDraft}/>}
@@ -915,20 +1022,50 @@ export default function SetupWizard() {
 
             {/* Footer nav */}
             <View style={[styles.footer, {backgroundColor: colors.bg, borderTopColor: colors.rule}]}>
-                <Btn variant="ghost" size="lg" onPress={back}>
-                    {step === 0 ? 'Cancel' : 'Back'}
-                </Btn>
-                <View style={{flex: 1}}>
-                    <Btn
-                        variant="primary"
-                        size="lg"
-                        icon="chevR"
-                        full
-                        disabled={!canProceed}
-                        onPress={next}
-                    >
-                        {step === 3 ? 'Cast on!' : 'Next'}
+                {blocked && (
+                    <View style={[styles.blockedBanner, {
+                        backgroundColor: '#FBEFEA',
+                        borderColor: 'rgba(156,61,46,0.25)',
+                        borderRadius: radius.sm,
+                    }]}>
+                        <View style={[styles.blockedCircle, {backgroundColor: colors.brick}]}>
+                            <Text style={{fontFamily: fonts.display, fontSize: 13, color: '#FBF6EC', lineHeight: 16}}>!</Text>
+                        </View>
+                        <Text style={{flex: 1, fontFamily: fonts.bodySb, fontSize: 13, color: colors.brick, letterSpacing: -0.1}}>
+                            Fill the required fields to continue.
+                        </Text>
+                        <Icon name="chevDown" size={14} color={colors.brick}/>
+                    </View>
+                )}
+                <View style={styles.footerBtns}>
+                    <Btn variant="ghost" size="lg" onPress={back}>
+                        {step === 0 ? 'Cancel' : 'Back'}
                     </Btn>
+                    <View style={{flex: 1}}>
+                        {blocked ? (
+                            <Pressable
+                                onPress={next}
+                                style={{
+                                    height: 58, borderRadius: radius.md,
+                                    backgroundColor: '#E8D6CF',
+                                    borderWidth: 1.5, borderStyle: 'dashed', borderColor: colors.brick,
+                                    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+                                    gap: 8, width: '100%',
+                                }}
+                            >
+                                <View style={[styles.blockedCircle, {backgroundColor: colors.brick, width: 18, height: 18, borderRadius: 9}]}>
+                                    <Text style={{fontFamily: fonts.display, fontSize: 12, color: '#FBF6EC', lineHeight: 16}}>!</Text>
+                                </View>
+                                <Text style={{fontFamily: fonts.bodySb, fontSize: 17, color: colors.brick, letterSpacing: -0.1}}>
+                                    Next
+                                </Text>
+                            </Pressable>
+                        ) : (
+                            <Btn variant="primary" size="lg" icon="chevR" full onPress={next}>
+                                {step === 3 ? 'Cast on!' : 'Next'}
+                            </Btn>
+                        )}
+                    </View>
                 </View>
             </View>
         </Screen>
@@ -947,7 +1084,10 @@ const styles = StyleSheet.create({
     stepsRow: {flexDirection: 'row', gap: 6, paddingHorizontal: 20, paddingBottom: 12},
     stepPip: {flex: 1, height: 6, borderRadius: 4},
     stepHeading: {paddingBottom: 16},
-    footer: {flexDirection: 'row', gap: 10, padding: 16, paddingBottom: 24, borderTopWidth: 1},
+    footer: {flexDirection: 'column', padding: 16, paddingBottom: 24, borderTopWidth: 1},
+    footerBtns: {flexDirection: 'row', gap: 10},
+    blockedBanner: {flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1, padding: 10, marginBottom: 10},
+    blockedCircle: {width: 18, height: 18, borderRadius: 9, alignItems: 'center', justifyContent: 'center'},
     sectionLabel: {fontSize: 10.5, letterSpacing: 3, textTransform: 'uppercase'},
     sectionLabelRow: {flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 8},
     nameBox: {borderWidth: 2, padding: 18},
