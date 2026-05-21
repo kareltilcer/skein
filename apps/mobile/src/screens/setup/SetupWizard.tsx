@@ -658,8 +658,17 @@ function Step3({draft, onChange}: { draft: Draft; onChange: (d: Draft) => void }
                         }}
                     />
 
-                    {seq.rows.map((row, ri) => (
-                        <View key={row.id} style={[styles.rowCard, {borderColor: colors.rule}]}>
+                    {seq.rows.map((row, ri) => {
+                        const isActiveRow = showStitchPicker?.partIdx === activePart && showStitchPicker?.seqIdx === si && showStitchPicker?.rowIdx === ri
+                        return (
+                        <View key={row.id} style={[styles.rowCard, {
+                            borderColor: isActiveRow ? colors.mustard : colors.rule,
+                            backgroundColor: isActiveRow ? colors.mustard + '18' : 'transparent',
+                            borderRadius: isActiveRow ? 8 : 0,
+                            marginHorizontal: isActiveRow ? -6 : 0,
+                            paddingHorizontal: isActiveRow ? 6 : 0,
+                            paddingBottom: 12,
+                        }]}>
                             <Text style={{
                                 fontFamily: fonts.mono,
                                 fontSize: 10,
@@ -701,7 +710,7 @@ function Step3({draft, onChange}: { draft: Draft; onChange: (d: Draft) => void }
                                 </Pressable>
                             </View>
                         </View>
-                    ))}
+                    )})}
 
                     <Pressable onPress={() => addRow(si)} style={[styles.addRowBtn, {borderColor: colors.rule}]}>
                         <Icon name="plus" size={13} color={colors.inkMute}/>
@@ -736,7 +745,6 @@ function Step3({draft, onChange}: { draft: Draft; onChange: (d: Draft) => void }
                                 key={s.id}
                                 onPress={() => {
                                     addStitchToRow(showStitchPicker.partIdx, showStitchPicker.seqIdx, showStitchPicker.rowIdx, s.id)
-                                    setShowStitchPicker(null)
                                 }}
                                 style={[styles.stitchPickerChip, {backgroundColor: s.color, borderRadius: 10}]}
                             >
