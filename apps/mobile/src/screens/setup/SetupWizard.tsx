@@ -1,5 +1,6 @@
-import React, {useState, useRef, forwardRef, useImperativeHandle} from 'react'
-import {View, Text, ScrollView, TextInput, Pressable, StyleSheet} from 'react-native'
+import React, {useState, useRef, useCallback, forwardRef, useImperativeHandle} from 'react'
+import {View, Text, ScrollView, TextInput, Pressable, StyleSheet, Modal} from 'react-native'
+import {BlurView} from 'expo-blur'
 
 import {useRouter} from 'expo-router'
 import {useTheme} from '../../theme/ThemeContext'
@@ -12,9 +13,13 @@ import Btn from '../../components/ui/Btn'
 import IconBtn from '../../components/ui/IconBtn'
 import StitchGlyph from '../../components/StitchGlyph'
 import type {StitchInstance, Craft} from '../../types'
+import _DraggableFlatList, {ScaleDecorator as _ScaleDecorator} from 'react-native-draggable-flatlist'
+const DraggableFlatList = _DraggableFlatList as any
+const ScaleDecorator = _ScaleDecorator as any
 
 const YARN_WEIGHTS = ['Lace', 'Fingering', 'Sport', 'DK', 'Worsted', 'Aran', 'Bulky', 'Chunky', 'Jumbo']
 const YARN_COLORS = ['#9C3D2E', '#D4923B', '#3F6B4A', '#8B5CF6', '#3B82F6', '#EC4899', '#F59E0B', '#6EE7B7']
+const PART_COLORS = ['#9C3D2E', '#D4923B', '#3F6B4A', '#7A5A8C', '#3B5B7A', '#C2547B']
 const MAX_NAME = 60
 
 type NeedleEntry = { mm: string; us: string; typical: string }
@@ -62,7 +67,7 @@ const CROCHET_SIZES: NeedleEntry[] = [
 const KNIT_NEEDLE_TYPES = ['Straight', 'Circular', 'DPN']
 
 type DraftPart = {
-    id: string; name: string
+    id: string; name: string; color: string; notes?: string
     sequences: DraftSequence[]
 }
 type DraftSequence = {
@@ -79,10 +84,17 @@ type Draft = {
     name: string; craft: Craft; yarnWeight: string
     needleSize: string; needleType: string; yarnColor: string; notes: string
     parts: DraftPart[]
+    partsCustomized?: boolean   // true once user has explicitly added a part
 }
 
 function uuid4() {
     return Math.random().toString(36).slice(2) + Date.now().toString(36)
+}
+
+function partMeta(part: DraftPart): string {
+    const seqCount = part.sequences.length
+    const rowCount = part.sequences.reduce((s, seq) => s + seq.rows.length, 0)
+    return `${seqCount} sequence${seqCount !== 1 ? 's' : ''} · ~${rowCount} rows`
 }
 
 function WizardSteps({step}: { step: number }) {
@@ -489,71 +501,474 @@ const Step1 = forwardRef<Step1Handle, {
 
 // ── Step 2 ─────────────────────────────────────────────────────
 function Step2({draft, onChange}: { draft: Draft; onChange: (d: Draft) => void }) {
-    const {colors, fonts, fontSize, spacing, radius} = useTheme()
+    const {colors, fonts} = useTheme()
 
-    const addPart = () => {
+    const [sheetMode, setSheetMode] = useState<'add' | 'edit' | null>(null)
+    const [editingPartId, setEditingPartId] = useState<string | null>(null)
+    const [sheetName, setSheetName] = useState('')
+    const [sheetColor, setSheetColor] = useState(PART_COLORS[0]!)
+    const [sheetNotes, setSheetNotes] = useState('')
+    const nameInputRef = useRef<TextInput>(null)
+
+    const openAddSheet = useCallback(() => {
+        const used = new Set(draft.parts.map(p => p.color))
+        const color = PART_COLORS.find(c => !used.has(c)) ?? PART_COLORS[draft.parts.length % PART_COLORS.length]!
+        setSheetName('')
+        setSheetColor(color)
+        setSheetNotes('')
+        setEditingPartId(null)
+        setSheetMode('add')
+    }, [draft.parts])
+
+    const openEditSheet = useCallback((part: DraftPart) => {
+        setSheetName(part.name)
+        setSheetColor(part.color)
+        setSheetNotes(part.notes ?? '')
+        setEditingPartId(part.id)
+        setSheetMode('edit')
+    }, [])
+
+    const closeSheet = useCallback(() => {
+        setSheetMode(null)
+        setEditingPartId(null)
+    }, [])
+
+    const confirmAdd = () => {
+        if (!sheetName.trim()) return
         const newPart: DraftPart = {
-            id: uuid4(), name: `Part ${draft.parts.length + 1}`,
+            id: uuid4(),
+            name: sheetName.trim(),
+            color: sheetColor,
+            notes: sheetNotes.trim() || undefined,
             sequences: [{id: uuid4(), name: 'Main sequence', rows: [], totalRepeats: 1, loop: false}],
         }
-        onChange({...draft, parts: [...draft.parts, newPart]})
+        // First explicit add: replace the implicit default "Main" part instead of appending
+        const isFirstAdd = !draft.partsCustomized && draft.parts.length === 1
+        const newParts = isFirstAdd ? [newPart] : [...draft.parts, newPart]
+        onChange({...draft, parts: newParts, partsCustomized: true})
+        closeSheet()
     }
 
-    const updatePartName = (id: string, name: string) => {
-        onChange({...draft, parts: draft.parts.map((p) => p.id === id ? {...p, name} : p)})
+    const confirmEdit = () => {
+        onChange({
+            ...draft,
+            parts: draft.parts.map(p =>
+                p.id === editingPartId
+                    ? {...p, name: sheetName.trim() || p.name, color: sheetColor, notes: sheetNotes.trim() || undefined}
+                    : p
+            ),
+        })
+        closeSheet()
     }
 
-    const removePart = (id: string) => {
+    const confirmRemove = () => {
         if (draft.parts.length <= 1) return
-        onChange({...draft, parts: draft.parts.filter((p) => p.id !== id)})
+        onChange({...draft, parts: draft.parts.filter(p => p.id !== editingPartId)})
+        closeSheet()
     }
+
+    const isEdit = sheetMode === 'edit'
+    const editingIdx = draft.parts.findIndex(p => p.id === editingPartId)
+    const isEmpty = !draft.partsCustomized
+
+    const renderPartRow = useCallback(({item: part, drag, isActive}: any) => {
+        const idx = draft.parts.findIndex(p => p.id === part.id)
+        return (
+            <ScaleDecorator>
+                <Pressable
+                    onLongPress={drag}
+                    delayLongPress={200}
+                    style={[
+                        styles.partRow,
+                        {
+                            backgroundColor: colors.card,
+                            borderColor: isActive ? colors.brick : colors.rule,
+                            marginBottom: 10,
+                        },
+                    ]}
+                >
+                    <Icon name="grip" size={20} color={colors.inkMute}/>
+                    <View style={{
+                        width: 36, height: 36, borderRadius: 10,
+                        backgroundColor: part.color,
+                        alignItems: 'center', justifyContent: 'center',
+                    }}>
+                        <Text style={{fontFamily: fonts.display, fontSize: 16, color: '#FBF6EC'}}>{idx + 1}</Text>
+                    </View>
+                    <View style={{flex: 1}}>
+                        <Text style={{fontFamily: fonts.bodySb, fontSize: 16, color: colors.ink}}>{part.name}</Text>
+                        <Text style={{fontFamily: fonts.mono, fontSize: 12, color: colors.inkMute, marginTop: 2}}>{partMeta(part)}</Text>
+                    </View>
+                    <Pressable onPress={() => openEditSheet(part)} hitSlop={8}>
+                        <Icon name="edit" size={18} color={colors.inkSoft}/>
+                    </Pressable>
+                </Pressable>
+            </ScaleDecorator>
+        )
+    }, [colors, fonts, openEditSheet, draft.parts])
+
+    // ── Empty state ──────────────────────────────────────────────
+    const emptyState = (
+        <ScrollView contentContainerStyle={{padding: 20, gap: 12, paddingBottom: 140}}>
+            <View style={{
+                backgroundColor: colors.cream2,
+                borderWidth: 1.5, borderStyle: 'dashed', borderColor: colors.rule,
+                borderRadius: 20,
+                paddingTop: 22, paddingHorizontal: 20, paddingBottom: 20,
+                alignItems: 'center', gap: 12,
+            }}>
+                {/* Decorative 3-tile row */}
+                <View style={{flexDirection: 'row', gap: 8, alignItems: 'flex-end', paddingTop: 4, paddingBottom: 6}}>
+                    <View style={{
+                        width: 28, height: 36, borderRadius: 8,
+                        backgroundColor: colors.brick,
+                        alignItems: 'center', justifyContent: 'center',
+                        shadowColor: colors.brick,
+                        shadowOffset: {width: 0, height: 4},
+                        shadowOpacity: 0.45,
+                        shadowRadius: 8,
+                        elevation: 4,
+                    }}>
+                        <StitchGlyph symbol="vline" size={16} color="#FBF6EC"/>
+                    </View>
+                    <View style={{
+                        width: 28, height: 36, borderRadius: 8,
+                        borderWidth: 1.5, borderStyle: 'dashed', borderColor: colors.rule,
+                        alignItems: 'center', justifyContent: 'center',
+                    }}>
+                        <Icon name="plus" size={12} color={colors.inkMute}/>
+                    </View>
+                    <View style={{
+                        width: 28, height: 36, borderRadius: 8,
+                        borderWidth: 1.5, borderStyle: 'dashed', borderColor: colors.rule,
+                        alignItems: 'center', justifyContent: 'center',
+                        opacity: 0.55,
+                    }}>
+                        <Icon name="plus" size={12} color={colors.inkMute}/>
+                    </View>
+                </View>
+                <Text style={{
+                    fontFamily: fonts.display, fontSize: 24, color: colors.brick,
+                    letterSpacing: -0.25, lineHeight: 26, textAlign: 'center',
+                }}>
+                    Just the one piece?
+                </Text>
+                <Text style={{
+                    fontFamily: fonts.body, fontSize: 13.5, color: colors.inkSoft,
+                    lineHeight: 20, textAlign: 'center', maxWidth: 300,
+                }}>
+                    Scarves, dishcloths, blankets, simple hats — they're a single piece, and Skein's happy with that. Add more parts only if your project splits into separate pieces, like sleeves, panels, or a pocket.
+                </Text>
+                <Pressable
+                    onPress={openAddSheet}
+                    style={{
+                        flexDirection: 'row', alignItems: 'center', gap: 6,
+                        borderWidth: 1.5, borderStyle: 'dashed', borderColor: colors.brick,
+                        borderRadius: 14, paddingVertical: 12, paddingHorizontal: 18,
+                        marginTop: 4,
+                    }}
+                >
+                    <Icon name="plus" size={14} color={colors.brick}/>
+                    <Text style={{fontFamily: fonts.bodySb, fontSize: 14, color: colors.brick}}>Add a part</Text>
+                </Pressable>
+                <Text style={{
+                    fontFamily: fonts.mono, fontSize: 10, color: colors.inkMute,
+                    letterSpacing: 2, textTransform: 'uppercase', marginTop: 2,
+                }}>
+                    ✻ one part is a whole project ✻
+                </Text>
+            </View>
+            <View style={{
+                backgroundColor: colors.card,
+                borderWidth: 1, borderColor: colors.rule,
+                borderRadius: 14, padding: 12,
+                flexDirection: 'row', gap: 10, alignItems: 'flex-start',
+            }}>
+                <Icon name="bulb" size={16} color={colors.mustardDk}/>
+                <Text style={{fontFamily: fonts.body, fontSize: 12.5, color: colors.inkSoft, flex: 1, lineHeight: 18}}>
+                    <Text style={{fontWeight: '700', color: colors.ink}}>Not sure? </Text>
+                    Knit a sample first, then come back and split it if you need to. You can add parts at any time.
+                </Text>
+            </View>
+        </ScrollView>
+    )
+
+    // ── Populated state ──────────────────────────────────────────
+    const listFooter = (
+        <View style={{marginTop: 4}}>
+            <Pressable
+                onPress={openAddSheet}
+                style={[styles.addPartBtn, {borderColor: colors.rule, borderRadius: 18, paddingVertical: 14}]}
+            >
+                <Icon name="plus" size={16} color={colors.brick}/>
+                <Text style={{fontFamily: fonts.bodySb, fontSize: 14, color: colors.brick}}>Add another part</Text>
+            </Pressable>
+            <View style={{
+                backgroundColor: colors.cream2,
+                borderRadius: 14, padding: 12, marginTop: 14, marginBottom: 140,
+                flexDirection: 'row', gap: 10, alignItems: 'flex-start',
+            }}>
+                <Icon name="bulb" size={16} color={colors.mustardDk}/>
+                <Text style={{fontFamily: fonts.body, fontSize: 12.5, color: colors.inkSoft, flex: 1, lineHeight: 18}}>
+                    <Text style={{fontWeight: '700', color: colors.ink}}>Tip: </Text>
+                    Drag to reorder. Knit them in whatever order makes sense — Skein only tracks one part at a time.
+                </Text>
+            </View>
+        </View>
+    )
+
+    const populatedState = (
+        <DraggableFlatList
+            data={draft.parts}
+            keyExtractor={(p: DraftPart) => p.id}
+            onDragEnd={({data}: {data: DraftPart[]}) => onChange({...draft, parts: data})}
+            contentContainerStyle={{paddingTop: 20, paddingHorizontal: 20}}
+            renderItem={renderPartRow}
+            ListFooterComponent={listFooter}
+        />
+    )
+
+    // ── Part sheet ───────────────────────────────────────────────
+    // When the user is adding their first explicit part (replacing the implicit default),
+    // the next slot is 1, not draft.parts.length + 1 (which would count "Main" as slot 1).
+    const nextSlotNumber = !draft.partsCustomized && draft.parts.length === 1 ? 1 : draft.parts.length + 1
+    const sheetSlotLabel = isEdit
+        ? `Editing part ${editingIdx + 1} of ${draft.parts.length}`
+        : `New part · slot ${nextSlotNumber}`
+    const sheetTitle = isEdit
+        ? `Edit the ${draft.parts.find(p => p.id === editingPartId)?.name ?? ''}`
+        : 'Add a part'
+    const sheetTileNumber = isEdit ? editingIdx + 1 : nextSlotNumber
+
+    const partSheet = (
+        <Modal
+            visible={sheetMode !== null}
+            transparent
+            animationType="slide"
+            onRequestClose={closeSheet}
+            onShow={() => setTimeout(() => nameInputRef.current?.focus(), 50)}
+        >
+            <View style={{flex: 1}}>
+                <BlurView
+                    intensity={18}
+                    tint="dark"
+                    style={[StyleSheet.absoluteFillObject, {backgroundColor: 'rgba(43,24,16,0.28)'}]}
+                />
+                <Pressable
+                    style={StyleSheet.absoluteFillObject}
+                    onPress={closeSheet}
+                />
+                <View
+                    style={{flex: 1, justifyContent: 'flex-end'}}
+                    pointerEvents="box-none"
+                >
+                    <View style={{
+                        backgroundColor: colors.bg,
+                        borderTopLeftRadius: 24, borderTopRightRadius: 24,
+                        maxHeight: '78%',
+                        paddingTop: 10, paddingBottom: 24,
+                        marginBottom: 0,
+                        shadowColor: 'rgba(43,24,16,1)',
+                        shadowOffset: {width: 0, height: -20},
+                        shadowOpacity: 0.35,
+                        shadowRadius: 30,
+                        elevation: 20,
+                    }}>
+                        {/* Drag handle */}
+                        <View style={{
+                            width: 44, height: 5, borderRadius: 3,
+                            backgroundColor: colors.rule,
+                            alignSelf: 'center', marginBottom: 12,
+                        }}/>
+                        {/* Header */}
+                        <View style={{paddingHorizontal: 22}}>
+                            <Text style={{
+                                fontFamily: fonts.mono, fontSize: 10.5, color: colors.mustardDk,
+                                letterSpacing: 1.7, textTransform: 'uppercase',
+                            }}>
+                                {sheetSlotLabel}
+                            </Text>
+                            <Text style={{
+                                fontFamily: fonts.display, fontSize: 26, color: colors.brick,
+                                letterSpacing: -0.25, lineHeight: 30, marginTop: 4,
+                            }}>
+                                {sheetTitle}
+                            </Text>
+                            <Pressable
+                                onPress={closeSheet}
+                                style={{
+                                    position: 'absolute', top: 0, right: 22,
+                                    width: 34, height: 34, borderRadius: 17,
+                                    backgroundColor: colors.card,
+                                    borderWidth: 1, borderColor: colors.rule,
+                                    alignItems: 'center', justifyContent: 'center',
+                                }}
+                            >
+                                <Icon name="x" size={16} color={colors.ink}/>
+                            </Pressable>
+                        </View>
+                        {/* Scrollable body */}
+                        <ScrollView
+                            contentContainerStyle={{paddingTop: 18, paddingHorizontal: 22, paddingBottom: 14}}
+                            keyboardShouldPersistTaps="handled"
+                        >
+                            {/* Identity row */}
+                            <View style={{flexDirection: 'row', gap: 12, marginBottom: 18, alignItems: 'stretch'}}>
+                                <View style={{alignItems: 'center', gap: 6}}>
+                                    <View style={{
+                                        width: 56, height: 64, borderRadius: 14,
+                                        backgroundColor: sheetColor,
+                                        alignItems: 'center', justifyContent: 'center',
+                                        shadowColor: sheetColor,
+                                        shadowOffset: {width: 0, height: 6},
+                                        shadowOpacity: 0.45,
+                                        shadowRadius: 10,
+                                        elevation: 4,
+                                    }}>
+                                        <Text style={{fontFamily: fonts.display, fontSize: 28, color: '#FBF6EC'}}>
+                                            {sheetTileNumber}
+                                        </Text>
+                                    </View>
+                                    <Text style={{
+                                        fontFamily: fonts.mono, fontSize: 9.5,
+                                        color: colors.inkMute, letterSpacing: 1.5,
+                                        textTransform: 'uppercase',
+                                    }}>Preview</Text>
+                                </View>
+                                <View style={{flex: 1}}>
+                                    <Text style={{
+                                        fontFamily: fonts.mono, fontSize: 10.5, color: colors.inkMute,
+                                        letterSpacing: 1.7, textTransform: 'uppercase', marginBottom: 6,
+                                    }}>Part name</Text>
+                                    <View style={{
+                                        backgroundColor: colors.card,
+                                        borderWidth: 2, borderColor: colors.brick,
+                                        borderRadius: 14, paddingVertical: 12, paddingHorizontal: 14, minHeight: 44,
+                                        ...(sheetMode === 'add' ? {
+                                            shadowColor: colors.brick,
+                                            shadowOffset: {width: 0, height: 0},
+                                            shadowOpacity: 0.08,
+                                            shadowRadius: 4,
+                                        } : {}),
+                                    }}>
+                                        <TextInput
+                                            ref={nameInputRef}
+                                            value={sheetName}
+                                            onChangeText={setSheetName}
+                                            placeholder="e.g. Left sleeve"
+                                            placeholderTextColor={colors.inkMute}
+                                            style={{
+                                                fontFamily: fonts.display, fontSize: 22,
+                                                color: colors.ink, letterSpacing: -0.25,
+                                            }}
+                                        />
+                                    </View>
+                                </View>
+                            </View>
+                            {/* Color swatches */}
+                            <Text style={{
+                                fontFamily: fonts.mono, fontSize: 10.5, color: colors.inkMute,
+                                letterSpacing: 1.7, textTransform: 'uppercase', marginBottom: 10,
+                                marginTop: 22,
+                            }}>Tile color</Text>
+                            <View style={{flexDirection: 'row', gap: 10, flexWrap: 'wrap', marginBottom: 22}}>
+                                {PART_COLORS.map(c => (
+                                    <Pressable
+                                        key={c}
+                                        onPress={() => setSheetColor(c)}
+                                        style={{
+                                            width: 42, height: 42, borderRadius: 12,
+                                            backgroundColor: c,
+                                            borderWidth: sheetColor === c ? 3 : 0,
+                                            borderColor: sheetColor === c ? colors.bg : 'transparent',
+                                            shadowColor: sheetColor === c ? colors.ink : 'transparent',
+                                            shadowOffset: {width: 0, height: 0},
+                                            shadowOpacity: sheetColor === c ? 0.5 : 0,
+                                            shadowRadius: sheetColor === c ? 4 : 0,
+                                            elevation: sheetColor === c ? 4 : 0,
+                                        }}
+                                    />
+                                ))}
+                            </View>
+                            {/* Notes */}
+                            <View style={{flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 8}}>
+                                <Text style={{fontFamily: fonts.mono, fontSize: 10.5, color: colors.inkMute, letterSpacing: 1.7, textTransform: 'uppercase'}}>Notes</Text>
+                                <Text style={{fontFamily: fonts.mono, fontSize: 10, color: colors.inkMute, letterSpacing: 0.5}}>optional · just for you</Text>
+                            </View>
+                            <View style={{
+                                backgroundColor: colors.card, borderWidth: 1, borderColor: colors.rule,
+                                borderRadius: 14, paddingVertical: 12, paddingHorizontal: 14, minHeight: 64, marginBottom: 22,
+                            }}>
+                                <TextInput
+                                    value={sheetNotes}
+                                    onChangeText={setSheetNotes}
+                                    placeholder="e.g. 'knit in the round, switch to DPN at decreases'"
+                                    placeholderTextColor={colors.inkMute}
+                                    multiline
+                                    style={{fontFamily: fonts.body, fontSize: 13.5, color: colors.ink, lineHeight: 20}}
+                                />
+                            </View>
+                            {/* Remove section (edit mode only) */}
+                            {isEdit && draft.parts.length > 1 && (
+                                <View style={{paddingTop: 18, marginBottom: 4}}>
+                                    <View style={{
+                                        height: 0, borderWidth: 1, borderStyle: 'dashed',
+                                        borderColor: colors.rule, marginBottom: 18,
+                                    }}/>
+                                    <Pressable
+                                        onPress={confirmRemove}
+                                        style={{
+                                            width: '100%', flexDirection: 'row',
+                                            alignItems: 'center', justifyContent: 'center', gap: 8,
+                                            borderWidth: 1.5, borderColor: colors.brick,
+                                            borderRadius: 14, paddingVertical: 12, paddingHorizontal: 14,
+                                        }}
+                                    >
+                                        <Icon name="trash" size={16} color={colors.brick}/>
+                                        <Text style={{fontFamily: fonts.bodySb, fontSize: 14, color: colors.brick}}>Remove this part</Text>
+                                    </Pressable>
+                                    <Text style={{
+                                        fontFamily: fonts.mono, fontSize: 10, color: colors.inkMute,
+                                        letterSpacing: 0.5, textAlign: 'center', marginTop: 8,
+                                    }}>
+                                        {(() => {
+                                            const seqCount = draft.parts.find(p => p.id === editingPartId)?.sequences.length ?? 0
+                                            return `Its ${seqCount} sequence${seqCount !== 1 ? 's' : ''} will stay in your Library.`
+                                        })()}
+                                    </Text>
+                                </View>
+                            )}
+                        </ScrollView>
+                        {/* Footer */}
+                        <View style={{
+                            flexDirection: 'row', gap: 10,
+                            paddingHorizontal: 22, paddingTop: 12,
+                            borderTopWidth: 1, borderTopColor: colors.rule,
+                            backgroundColor: colors.bg,
+                        }}>
+                            <Btn variant="ghost" size="lg" onPress={closeSheet}>Cancel</Btn>
+                            <View style={{flex: 1}}>
+                                <Btn
+                                    variant="primary" size="lg"
+                                    icon={isEdit ? 'check' : 'plus'}
+                                    full
+                                    onPress={isEdit ? confirmEdit : confirmAdd}
+                                >
+                                    {isEdit ? 'Save changes' : 'Add part'}
+                                </Btn>
+                            </View>
+                        </View>
+                    </View>
+                </View>
+            </View>
+        </Modal>
+    )
 
     return (
-        <ScrollView contentContainerStyle={{padding: spacing[5], gap: spacing[4], paddingBottom: 140}}>
-            <Text style={{fontFamily: fonts.body, fontSize: fontSize.sm, color: colors.inkSoft, lineHeight: 20}}>
-                Break your project into logical parts — body, sleeves, collar, etc. You can always add more later.
-            </Text>
-
-            {draft.parts.map((part, idx) => (
-                <View key={part.id} style={[styles.partCard, {
-                    backgroundColor: colors.card,
-                    borderColor: colors.rule,
-                    borderRadius: radius.lg
-                }]}>
-                    <View style={styles.partHeader}>
-                        <Text style={{
-                            fontFamily: fonts.mono,
-                            fontSize: 10,
-                            color: colors.inkMute,
-                            letterSpacing: 2,
-                            textTransform: 'uppercase'
-                        }}>
-                            Part {idx + 1}
-                        </Text>
-                        {draft.parts.length > 1 && (
-                            <Pressable onPress={() => removePart(part.id)}>
-                                <Icon name="trash" size={16} color={colors.inkMute}/>
-                            </Pressable>
-                        )}
-                    </View>
-                    <TextInput
-                        value={part.name}
-                        onChangeText={(t) => updatePartName(part.id, t)}
-                        placeholder="e.g. Body"
-                        placeholderTextColor={colors.inkMute}
-                        style={{fontFamily: fonts.bodySb, fontSize: fontSize.lg, color: colors.ink, marginTop: 6}}
-                    />
-                </View>
-            ))}
-
-            <Pressable
-                onPress={addPart}
-                style={[styles.addPartBtn, {borderColor: colors.brick, borderRadius: radius.md}]}
-            >
-                <Icon name="plus" size={14} color={colors.brick}/>
-                <Text style={{fontFamily: fonts.bodySb, fontSize: 13, color: colors.brick}}>Add part</Text>
-            </Pressable>
-        </ScrollView>
+        <View style={{flex: 1}}>
+            {isEmpty ? emptyState : populatedState}
+            {partSheet}
+        </View>
     )
 }
 
@@ -976,6 +1391,7 @@ export default function SetupWizard() {
             {
                 id: uuid4(),
                 name: 'Main',
+                color: PART_COLORS[0]!,
                 sequences: [
                     {id: uuid4(), name: 'Main sequence', rows: [], totalRepeats: 1, loop: false},
                 ],
@@ -992,7 +1408,7 @@ export default function SetupWizard() {
         {
             label: 'Step 2 of 4',
             title: 'Break it into parts.',
-            sub: 'Body, sleeves, collar — whatever makes sense for your project.'
+            sub: 'A cardigan has a body and two sleeves. A scarf has one part. You decide.'
         },
         {label: 'Step 3 of 4', title: 'Build a sequence.', sub: 'Name it, add rows, tap stitches below to fill the active row.'},
         {label: 'Step 4 of 4', title: 'Arrange & repeat.', sub: 'Set how many times each sequence repeats.'},
@@ -1182,6 +1598,10 @@ const styles = StyleSheet.create({
     notesBox: {borderWidth: 1, padding: 14, minHeight: 80},
     partCard: {borderWidth: 1, padding: 16},
     partHeader: {flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between'},
+    partRow: {
+        flexDirection: 'row', alignItems: 'center', gap: 12,
+        borderWidth: 1, borderRadius: 18, padding: 14,
+    },
     addPartBtn: {
         flexDirection: 'row',
         alignItems: 'center',

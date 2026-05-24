@@ -32,6 +32,8 @@ export type Sequence = {
 export type Part = {
   id: string
   name: string
+  color: string
+  notes?: string
   sequences: Sequence[]
 }
 
