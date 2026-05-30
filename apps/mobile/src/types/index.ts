@@ -35,6 +35,7 @@ export type Part = {
   color: string
   notes?: string
   sequences: Sequence[]
+  loop?: boolean
 }
 
 export type Project = {

@@ -1,6 +1,7 @@
 import React, {useState, useRef, useCallback, forwardRef, useImperativeHandle} from 'react'
 import {View, Text, ScrollView, TextInput, Pressable, StyleSheet, Modal} from 'react-native'
 import {BlurView} from 'expo-blur'
+import {LinearGradient} from 'expo-linear-gradient'
 
 import {useRouter} from 'expo-router'
 import {useTheme} from '../../theme/ThemeContext'
@@ -74,6 +75,7 @@ const KNIT_NEEDLE_TYPES = ['Straight', 'Circular', 'DPN']
 type DraftPart = {
     id: string; name: string; color: string; notes?: string
     sequences: DraftSequence[]
+    loop?: boolean
 }
 type DraftSequence = {
     id: string; name: string
@@ -549,6 +551,7 @@ function Step2({draft, onChange}: { draft: Draft; onChange: (d: Draft) => void }
             name: sheetName.trim(),
             color: sheetColor,
             notes: sheetNotes.trim() || undefined,
+            loop: false,
             sequences: [{id: uuid4(), name: 'Main sequence', rows: [], totalRepeats: 1, loop: false}],
         }
         // First explicit add: replace the implicit default "Main" part instead of appending
@@ -982,7 +985,14 @@ function Step2({draft, onChange}: { draft: Draft; onChange: (d: Draft) => void }
 }
 
 // ── Step 3 ─────────────────────────────────────────────────────
-function Step3({draft, onChange}: { draft: Draft; onChange: (d: Draft) => void }) {
+type Step3Focus = { partIdx: number; seqId: string }
+
+function Step3({draft, onChange, initialFocus, onFocusConsumed}: {
+    draft: Draft
+    onChange: (d: Draft) => void
+    initialFocus?: Step3Focus | null
+    onFocusConsumed?: () => void
+}) {
     const {colors, fonts, spacing} = useTheme()
     const recentStitchIds  = useSettingsStore(s => s.recentStitchIds)
     const recordStitchUsed = useSettingsStore(s => s.recordStitchUsed)
@@ -998,6 +1008,18 @@ function Step3({draft, onChange}: { draft: Draft; onChange: (d: Draft) => void }
     const [collapsedSeqs, setCollapsedSeqs] = useState<Set<string>>(new Set())
     const [confirmDialog, setConfirmDialog] = useState<{seqIdx: number; rowIdx: number} | null>(null)
     const [confirmSeqDialog, setConfirmSeqDialog] = useState<{seqIdx: number} | null>(null)
+
+    React.useEffect(() => {
+        if (!initialFocus) return
+        const {partIdx, seqId} = initialFocus
+        if (partIdx >= 0 && partIdx < draft.parts.length) {
+            setActivePart(partIdx)
+            const seqIdx = draft.parts[partIdx]!.sequences.findIndex(s => s.id === seqId)
+            setFocusedSeq(seqIdx >= 0 ? seqIdx : null)
+            setActiveRow(null)
+        }
+        onFocusConsumed?.()
+    }, [initialFocus])
 
     const libraryRows      = useLibraryStore(s => s.rows)
     const librarySequences = useLibraryStore(s => s.sequences)
@@ -1936,130 +1958,367 @@ function Step3({draft, onChange}: { draft: Draft; onChange: (d: Draft) => void }
 }
 
 // ── Step 4 ─────────────────────────────────────────────────────
-function Step4({draft, onChange}: { draft: Draft; onChange: (d: Draft) => void }) {
-    const {colors, fonts, fontSize, spacing, radius} = useTheme()
+function Step4({draft, onChange, onJumpToStep3}: {
+    draft: Draft
+    onChange: (d: Draft) => void
+    onJumpToStep3: (partIdx: number, seqId: string) => void
+}) {
+    const {colors, fonts, spacing} = useTheme()
+    const librarySequences = useLibraryStore(s => s.sequences)
 
-    const updateRepeats = (partIdx: number, seqIdx: number, val: number) => {
-        const part = draft.parts[partIdx]!
-        const seq = part.sequences[seqIdx]!
-        const updated = {...seq, totalRepeats: Math.max(1, val)}
-        const updPart = {...part, sequences: part.sequences.map((s, i) => i === seqIdx ? updated : s)}
-        onChange({...draft, parts: draft.parts.map((p, i) => i === partIdx ? updPart : p)})
+    const [activePart, setActivePart] = useState(0)
+    const [showSeqPicker, setShowSeqPicker] = useState(false)
+
+    // Clamp active part if the user removed parts in Step 2 and bounced back.
+    const safeActive = Math.min(activePart, draft.parts.length - 1)
+    const part = draft.parts[safeActive]
+    if (!part) return null
+
+    const seqColorPalette = [colors.mustard, colors.brick, colors.forest]
+    const seqColorAt = (i: number) => seqColorPalette[i % seqColorPalette.length]!
+
+    const updatePart = (updated: DraftPart) => {
+        onChange({...draft, parts: draft.parts.map((p, i) => i === safeActive ? updated : p)})
     }
 
-    const toggleLoop = (partIdx: number, seqIdx: number) => {
-        const part = draft.parts[partIdx]!
+    const setSeqRepeats = (seqIdx: number, val: number) => {
         const seq = part.sequences[seqIdx]!
-        const updated = {...seq, loop: !seq.loop}
-        const updPart = {...part, sequences: part.sequences.map((s, i) => i === seqIdx ? updated : s)}
-        onChange({...draft, parts: draft.parts.map((p, i) => i === partIdx ? updPart : p)})
+        const next = Math.max(1, val)
+        updatePart({...part, sequences: part.sequences.map((s, i) => i === seqIdx ? {...seq, totalRepeats: next} : s)})
     }
 
-    const totalRowCount = draft.parts.reduce((sum, p) =>
-        sum + p.sequences.reduce((s2, seq) => s2 + seq.rows.length * seq.totalRepeats, 0), 0
+    const reorderSequences = (data: DraftSequence[]) => {
+        updatePart({...part, sequences: data})
+    }
+
+    const toggleLoop = () => {
+        updatePart({...part, loop: !part.loop})
+    }
+
+    const addSeqFromLib = (libSeq: LibrarySequence) => {
+        const newSeq: DraftSequence = {
+            id: uuid4(), name: libSeq.name,
+            rows: libSeq.rows.map(r => ({...r, id: uuid4()})),
+            totalRepeats: libSeq.totalRepeats,
+            loop: libSeq.loop,
+        }
+        updatePart({...part, sequences: [...part.sequences, newSeq]})
+        setShowSeqPicker(false)
+    }
+
+    const addPatternFromLib = (libPat: LibraryPattern) => {
+        const newSeqs: DraftSequence[] = libPat.sequenceIds
+            .map(id => librarySequences.find(s => s.id === id))
+            .filter((s): s is LibrarySequence => Boolean(s))
+            .map(libSeq => ({
+                id: uuid4(), name: libSeq.name,
+                rows: libSeq.rows.map(r => ({...r, id: uuid4()})),
+                totalRepeats: libSeq.totalRepeats,
+                loop: libSeq.loop,
+            }))
+        updatePart({...part, sequences: [...part.sequences, ...newSeqs]})
+        setShowSeqPicker(false)
+    }
+
+    const totalRows = part.sequences.reduce((sum, seq) => sum + seq.rows.length * seq.totalRepeats, 0)
+
+    const breakdown = part.sequences
+        .filter(seq => seq.rows.length > 0)
+        .map(seq => {
+            const rowN = seq.rows.length
+            const tag = (seq.name.toLowerCase().split(/\s+/)[0] || '').trim()
+            const lhs = seq.totalRepeats > 1 ? `${rowN}×${seq.totalRepeats}` : `${rowN}`
+            return tag ? `${lhs} ${tag}` : lhs
+        })
+        .join(' · ')
+
+    const renderSeqCard = useCallback(({item: seq, drag, isActive, getIndex}: any) => {
+        const si: number = getIndex?.() ?? 0
+        const seqColor = seqColorAt(si)
+        const rowN = seq.rows.length
+        const total = rowN * seq.totalRepeats
+        const firstRowStitches = seq.rows[0]?.stitches ?? []
+        const previewIds: string[] = []
+        for (const st of firstRowStitches) {
+            for (let i = 0; i < st.count && previewIds.length < 6; i++) previewIds.push(st.stitchId)
+            if (previewIds.length >= 6) break
+        }
+        const moreRows = Math.max(0, rowN - 1)
+
+        return (
+            <ScaleDecorator>
+                <View style={{
+                    backgroundColor: colors.card,
+                    borderWidth: 1,
+                    borderColor: isActive ? colors.brick : colors.rule,
+                    borderRadius: 16,
+                    padding: 12,
+                    marginBottom: 10,
+                }}>
+                    <View style={{flexDirection: 'row', alignItems: 'center', gap: 10}}>
+                        <Pressable onLongPress={drag} delayLongPress={180} hitSlop={6}>
+                            <Icon name="grip" size={18} color={colors.inkMute}/>
+                        </Pressable>
+                        <View style={{
+                            width: 30, height: 30, borderRadius: 8,
+                            backgroundColor: seqColor,
+                            alignItems: 'center', justifyContent: 'center',
+                        }}>
+                            <Text style={{fontFamily: fonts.display, fontSize: 14, color: '#FBF6EC'}}>{si + 1}</Text>
+                        </View>
+                        <View style={{flex: 1, minWidth: 0}}>
+                            <Text
+                                numberOfLines={1}
+                                style={{fontFamily: fonts.bodySb, fontSize: 14.5, color: colors.ink, letterSpacing: -0.1}}
+                            >
+                                {seq.name}
+                            </Text>
+                            <Text style={{fontFamily: fonts.mono, fontSize: 11.5, color: colors.inkMute, marginTop: 1}}>
+                                {rowN} row{rowN === 1 ? '' : 's'} × {seq.totalRepeats} = {total} total
+                            </Text>
+                        </View>
+                        <Pressable onPress={() => onJumpToStep3(safeActive, seq.id)} hitSlop={8}>
+                            <Icon name="edit" size={16} color={colors.inkSoft}/>
+                        </Pressable>
+                    </View>
+
+                    {/* Stitch preview row */}
+                    <View style={{flexDirection: 'row', alignItems: 'center', gap: 3, flexWrap: 'wrap', marginTop: 10}}>
+                        {previewIds.map((id, i) => {
+                            const def = STITCH_MAP[id]
+                            if (!def) return null
+                            return (
+                                <View key={`${id}-${i}`} style={{
+                                    width: 18, height: 22, borderRadius: 5,
+                                    backgroundColor: colors.cream2,
+                                    borderWidth: 1.1, borderColor: seqColor,
+                                    alignItems: 'center', justifyContent: 'center',
+                                }}>
+                                    <StitchGlyph symbol={def.symbol} color={seqColor} size={10} strokeWidth={1.6}/>
+                                </View>
+                            )
+                        })}
+                        <Text style={{
+                            fontFamily: fonts.mono, fontSize: 10,
+                            color: colors.inkMute, paddingHorizontal: 6,
+                        }}>
+                            {rowN === 0 ? 'no rows yet' : `+ ${moreRows} more row${moreRows === 1 ? '' : 's'}`}
+                        </Text>
+                    </View>
+
+                    {/* Repeat stepper */}
+                    <View style={{
+                        marginTop: 10, paddingHorizontal: 10, paddingVertical: 6,
+                        backgroundColor: colors.cream2, borderRadius: 10,
+                        flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+                    }}>
+                        <View style={{flexDirection: 'row', alignItems: 'center', gap: 6}}>
+                            <Icon name="repeat" size={13} color={colors.mustardDk}/>
+                            <Text style={{fontFamily: fonts.body, fontSize: 12, color: colors.inkSoft}}>Repeat ×</Text>
+                        </View>
+                        <View style={{
+                            flexDirection: 'row', alignItems: 'center',
+                            backgroundColor: colors.bg, borderRadius: 8, paddingHorizontal: 4, paddingVertical: 3,
+                        }}>
+                            <Pressable
+                                onPress={() => setSeqRepeats(si, seq.totalRepeats - 1)}
+                                disabled={seq.totalRepeats <= 1}
+                                hitSlop={4}
+                                style={{paddingHorizontal: 8}}
+                            >
+                                <Text style={{
+                                    fontFamily: fonts.display, fontSize: 18,
+                                    color: seq.totalRepeats <= 1 ? colors.inkMute : colors.ink,
+                                }}>−</Text>
+                            </Pressable>
+                            <Text style={{
+                                fontFamily: fonts.mono, fontSize: 13, fontWeight: '700', color: colors.ink,
+                                minWidth: 26, textAlign: 'center',
+                            }}>{seq.totalRepeats}</Text>
+                            <Pressable
+                                onPress={() => setSeqRepeats(si, seq.totalRepeats + 1)}
+                                hitSlop={4}
+                                style={{paddingHorizontal: 8}}
+                            >
+                                <Text style={{fontFamily: fonts.display, fontSize: 18, color: colors.ink}}>+</Text>
+                            </Pressable>
+                        </View>
+                    </View>
+                </View>
+            </ScaleDecorator>
+        )
+    }, [colors, fonts, safeActive, part])
+
+    const listHeader = (
+        <View>
+            {draft.parts.length > 1 && (
+                <View style={[styles.tabRow2, {backgroundColor: colors.cream2, borderRadius: 12, marginBottom: spacing[4]}]}>
+                    {draft.parts.map((p, i) => (
+                        <Pressable
+                            key={p.id}
+                            onPress={() => setActivePart(i)}
+                            style={[styles.tabBtn2, {
+                                flexDirection: 'row', gap: 5,
+                                backgroundColor: safeActive === i ? colors.card : 'transparent',
+                                borderRadius: 9,
+                                ...(safeActive === i ? {
+                                    shadowColor: '#000',
+                                    shadowOffset: {width: 0, height: 1},
+                                    shadowOpacity: 0.06,
+                                    shadowRadius: 3,
+                                    elevation: 1,
+                                } : {}),
+                            }]}
+                        >
+                            <Text style={{fontFamily: fonts.bodySb, fontSize: 12, color: safeActive === i ? colors.brick : colors.inkSoft}}>
+                                {p.name}
+                            </Text>
+                            <Text style={{
+                                fontFamily: fonts.mono, fontSize: 9.5, fontWeight: '700', color: colors.inkMute,
+                                backgroundColor: safeActive === i ? colors.cream2 : 'transparent',
+                                paddingHorizontal: safeActive === i ? 5 : 0, paddingVertical: 1,
+                                borderRadius: 5, letterSpacing: 0.5,
+                            }}>
+                                {p.sequences.length}
+                            </Text>
+                        </Pressable>
+                    ))}
+                </View>
+            )}
+            <Text style={{
+                fontFamily: fonts.mono, fontSize: 11, color: colors.inkMute,
+                letterSpacing: 2, textTransform: 'uppercase', marginBottom: 8,
+            }}>
+                {part.name} · sequences in order
+            </Text>
+        </View>
+    )
+
+    const listFooter = (
+        <View>
+            {/* Reuse from library */}
+            <Pressable
+                onPress={() => setShowSeqPicker(true)}
+                style={{
+                    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+                    borderWidth: 1.5, borderStyle: 'dashed', borderColor: colors.rule,
+                    borderRadius: 14, paddingVertical: 12, marginTop: 4,
+                }}
+            >
+                <Icon name="library" size={14} color={colors.mustardDk}/>
+                <Text style={{fontFamily: fonts.bodySb, fontSize: 13.5, color: colors.inkSoft}}>
+                    Reuse from library
+                </Text>
+            </Pressable>
+
+            {/* Loop the whole part */}
+            <View style={{
+                marginTop: 14,
+                backgroundColor: colors.card,
+                borderWidth: 1, borderColor: colors.rule,
+                borderRadius: 16, padding: 14,
+                flexDirection: 'row', alignItems: 'center', gap: 12,
+            }}>
+                <View style={{
+                    width: 36, height: 36, borderRadius: 10,
+                    backgroundColor: colors.cream2,
+                    alignItems: 'center', justifyContent: 'center',
+                }}>
+                    <Icon name="repeat" size={18} color={colors.brick}/>
+                </View>
+                <View style={{flex: 1}}>
+                    <Text style={{fontFamily: fonts.bodySb, fontSize: 14.5, color: colors.ink}}>Loop the whole part?</Text>
+                    <Text style={{fontFamily: fonts.body, fontSize: 12, color: colors.inkMute, marginTop: 2, lineHeight: 16}}>
+                        After the last sequence, cycle back to #1. Great for tubes & socks.
+                    </Text>
+                </View>
+                <Pressable
+                    onPress={toggleLoop}
+                    style={{
+                        width: 42, height: 24, borderRadius: 12,
+                        backgroundColor: part.loop ? colors.brick : colors.rule,
+                        padding: 2, justifyContent: 'center',
+                    }}
+                >
+                    <View style={{
+                        width: 20, height: 20, borderRadius: 10,
+                        backgroundColor: '#FBF6EC',
+                        transform: [{translateX: part.loop ? 18 : 0}],
+                    }}/>
+                </Pressable>
+            </View>
+
+            {/* Final tally */}
+            <View style={{marginTop: 14, marginBottom: 24}}>
+                <LinearGradient
+                    colors={[colors.brick, colors.brickDk]}
+                    start={{x: 0, y: 0}} end={{x: 0, y: 1}}
+                    style={{
+                        borderRadius: 18, padding: 16,
+                        shadowColor: colors.brick,
+                        shadowOffset: {width: 0, height: 10},
+                        shadowOpacity: 0.3,
+                        shadowRadius: 14,
+                        elevation: 6,
+                    }}
+                >
+                    <Text style={{
+                        fontFamily: fonts.mono, fontSize: 10, color: '#FBF6EC',
+                        opacity: 0.7, letterSpacing: 1.6, textTransform: 'uppercase',
+                    }}>
+                        {part.name} · final tally
+                    </Text>
+                    <View style={{flexDirection: 'row', alignItems: 'baseline', gap: 8, marginTop: 4}}>
+                        <Text style={{fontFamily: fonts.display, fontSize: 40, color: '#FBF6EC', lineHeight: 42}}>
+                            {totalRows}
+                        </Text>
+                        <Text style={{fontFamily: fonts.body, fontSize: 13, color: '#FBF6EC', opacity: 0.9}}>
+                            rows total{part.loop ? ' · looping' : ''}
+                        </Text>
+                    </View>
+                    {breakdown.length > 0 && (
+                        <Text style={{
+                            fontFamily: fonts.mono, fontSize: 12, color: '#FBF6EC',
+                            opacity: 0.85, marginTop: 6,
+                        }}>
+                            {breakdown}
+                        </Text>
+                    )}
+                </LinearGradient>
+            </View>
+        </View>
     )
 
     return (
-        <ScrollView contentContainerStyle={{padding: spacing[5], gap: spacing[4], paddingBottom: 140}}>
-            {draft.parts.map((part, pi) => (
-                <View key={part.id}>
-                    <Text style={{
-                        fontFamily: fonts.mono,
-                        fontSize: 10,
-                        color: colors.inkMute,
-                        letterSpacing: 2,
-                        textTransform: 'uppercase',
-                        marginBottom: 8
+        <View style={{flex: 1}}>
+            <DraggableFlatList
+                data={part.sequences}
+                keyExtractor={(s: DraftSequence) => s.id}
+                onDragEnd={({data}: {data: DraftSequence[]}) => reorderSequences(data)}
+                contentContainerStyle={{paddingHorizontal: spacing[5], paddingTop: spacing[4], paddingBottom: 140}}
+                renderItem={renderSeqCard}
+                ListHeaderComponent={listHeader}
+                ListFooterComponent={listFooter}
+                ListEmptyComponent={
+                    <View style={{
+                        borderWidth: 1.5, borderStyle: 'dashed', borderColor: colors.rule,
+                        borderRadius: 14, padding: 18, alignItems: 'center', marginBottom: 4,
                     }}>
-                        {part.name}
-                    </Text>
-                    {part.sequences.map((seq, si) => (
-                        <View key={seq.id} style={[styles.arrangeCard, {
-                            backgroundColor: colors.card,
-                            borderColor: colors.rule,
-                            borderRadius: radius.lg
-                        }]}>
-                            <Text style={{
-                                fontFamily: fonts.bodySb,
-                                fontSize: fontSize.base,
-                                color: colors.ink,
-                                flex: 1
-                            }}>{seq.name}</Text>
-                            <Text style={{
-                                fontFamily: fonts.mono,
-                                fontSize: 11,
-                                color: colors.inkMute,
-                                marginTop: 2,
-                                marginBottom: 12
-                            }}>
-                                {seq.rows.length} rows
-                            </Text>
-
-                            <View style={styles.repeatRow}>
-                                <Text style={{
-                                    fontFamily: fonts.body,
-                                    fontSize: fontSize.sm,
-                                    color: colors.inkSoft
-                                }}>Repeats</Text>
-                                <View style={styles.stepper}>
-                                    <Pressable onPress={() => updateRepeats(pi, si, seq.totalRepeats - 1)}
-                                               style={[styles.stepperBtn, {borderColor: colors.rule}]}>
-                                        <Icon name="chevL" size={14} color={colors.ink}/>
-                                    </Pressable>
-                                    <Text style={{
-                                        fontFamily: fonts.mono,
-                                        fontSize: 15,
-                                        color: colors.ink,
-                                        minWidth: 28,
-                                        textAlign: 'center'
-                                    }}>
-                                        {seq.totalRepeats}
-                                    </Text>
-                                    <Pressable onPress={() => updateRepeats(pi, si, seq.totalRepeats + 1)}
-                                               style={[styles.stepperBtn, {borderColor: colors.rule}]}>
-                                        <Icon name="chevR" size={14} color={colors.ink}/>
-                                    </Pressable>
-                                </View>
-                            </View>
-
-                            <Pressable
-                                onPress={() => toggleLoop(pi, si)}
-                                style={[styles.loopToggle, {
-                                    borderColor: seq.loop ? colors.forest : colors.rule,
-                                    backgroundColor: seq.loop ? colors.forest + '18' : 'transparent',
-                                    borderRadius: radius.sm
-                                }]}
-                            >
-                                <Icon name="loop" size={14} color={seq.loop ? colors.forest : colors.inkMute}/>
-                                <Text style={{
-                                    fontFamily: fonts.body,
-                                    fontSize: 13,
-                                    color: seq.loop ? colors.forest : colors.inkMute,
-                                    fontWeight: '600'
-                                }}>
-                                    Loop endlessly
-                                </Text>
-                            </Pressable>
-                        </View>
-                    ))}
-                </View>
-            ))}
-
-            <View style={[styles.totalBadge, {
-                backgroundColor: colors.card,
-                borderColor: colors.rule,
-                borderRadius: radius.md
-            }]}>
-                <Text style={{
-                    fontFamily: fonts.mono,
-                    fontSize: 11,
-                    color: colors.inkMute,
-                    letterSpacing: 1.5,
-                    textTransform: 'uppercase'
-                }}>Total rows</Text>
-                <Text style={{fontFamily: fonts.display, fontSize: 32, color: colors.brick}}>{totalRowCount}</Text>
-            </View>
-        </ScrollView>
+                        <Text style={{fontFamily: fonts.body, fontSize: 13, color: colors.inkMute, textAlign: 'center'}}>
+                            No sequences yet — go back to Step 3 or reuse one from your library.
+                        </Text>
+                    </View>
+                }
+            />
+            <SeqPickerModal
+                visible={showSeqPicker}
+                onClose={() => setShowSeqPicker(false)}
+                onSelectSequence={addSeqFromLib}
+                onSelectPattern={addPatternFromLib}
+                onBuildNew={() => setShowSeqPicker(false)}
+                craftFilter={draft.craft}
+            />
+        </View>
     )
 }
 
@@ -2073,6 +2332,7 @@ export default function SetupWizard() {
 
     const [step, setStep] = useState(0)
     const [triedNext, setTriedNext] = useState(false)
+    const [step3Focus, setStep3Focus] = useState<Step3Focus | null>(null)
     const step1Ref = useRef<Step1Handle>(null)
     const [draft, setDraft] = useState<Draft>({
         name: '',
@@ -2087,6 +2347,7 @@ export default function SetupWizard() {
                 id: uuid4(),
                 name: 'Main',
                 color: PART_COLORS[0]!,
+                loop: false,
                 sequences: [
                     {id: uuid4(), name: 'Main sequence', rows: [], totalRepeats: 1, loop: false},
                 ],
@@ -2106,7 +2367,7 @@ export default function SetupWizard() {
             sub: 'A cardigan has a body and two sleeves. A scarf has one part. You decide.'
         },
         {label: 'Step 3 of 4', title: 'Plan every sequence.', sub: "Pick a part, then fill each sequence's rows. Scroll through them all."},
-        {label: 'Step 4 of 4', title: 'Arrange & repeat.', sub: 'Set how many times each sequence repeats.'},
+        {label: 'Step 4 of 4', title: 'Arrange the part.', sub: 'Drag to order. Set repeats. Loop if it tubes.'},
     ]
 
     const blocked = step === 0 && triedNext && !draft.name.trim()
@@ -2196,8 +2457,24 @@ export default function SetupWizard() {
             <View style={{flex: 1}}>
                 {step === 0 && <Step1 ref={step1Ref} draft={draft} onChange={setDraft} requiredError={triedNext && !draft.name.trim()}/>}
                 {step === 1 && <Step2 draft={draft} onChange={setDraft}/>}
-                {step === 2 && <Step3 draft={draft} onChange={setDraft}/>}
-                {step === 3 && <Step4 draft={draft} onChange={setDraft}/>}
+                {step === 2 && (
+                    <Step3
+                        draft={draft}
+                        onChange={setDraft}
+                        initialFocus={step3Focus}
+                        onFocusConsumed={() => setStep3Focus(null)}
+                    />
+                )}
+                {step === 3 && (
+                    <Step4
+                        draft={draft}
+                        onChange={setDraft}
+                        onJumpToStep3={(partIdx, seqId) => {
+                            setStep3Focus({partIdx, seqId})
+                            setStep(2)
+                        }}
+                    />
+                )}
             </View>
 
             {/* Footer nav */}
@@ -2307,37 +2584,11 @@ const styles = StyleSheet.create({
         paddingVertical: 12
     },
     tabRow2: {flexDirection: 'row', padding: 4, gap: 4},
-    tabBtn2: {flex: 1, alignItems: 'center', paddingVertical: 8},
+    tabBtn2: {flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 8, paddingHorizontal: 4},
     seqBlock: {borderWidth: 1, padding: 14, gap: 0},
     rowCard: {borderTopWidth: 1, borderTopColor: 'transparent', paddingTop: 12, marginTop: 12},
     stitchFlow: {flexDirection: 'row', flexWrap: 'wrap', gap: 6, alignItems: 'center'},
     miniChip2: {alignItems: 'center', paddingHorizontal: 8, paddingVertical: 6},
     addStitchBtn: {width: 32, height: 32, alignItems: 'center', justifyContent: 'center', borderWidth: 1},
     addRowBtn: {flexDirection: 'row', alignItems: 'center', gap: 6, paddingTop: 12, marginTop: 4},
-    arrangeCard: {borderWidth: 1, padding: 16, marginBottom: 8},
-    repeatRow: {flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10},
-    stepper: {flexDirection: 'row', alignItems: 'center', gap: 8},
-    stepperBtn: {
-        width: 32,
-        height: 32,
-        alignItems: 'center',
-        justifyContent: 'center',
-        borderRadius: 8,
-        borderWidth: 1
-    },
-    loopToggle: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 8,
-        borderWidth: 1,
-        paddingHorizontal: 12,
-        paddingVertical: 8
-    },
-    totalBadge: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        borderWidth: 1,
-        padding: 16
-    },
 })
