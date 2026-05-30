@@ -9,7 +9,7 @@ import Screen from '../components/ui/Screen'
 import AppBar from '../components/ui/AppBar'
 import Icon from '../components/ui/Icon'
 import Btn from '../components/ui/Btn'
-import type { Theme } from '../types'
+import type { Theme, Craft } from '../types'
 
 const LANGUAGE_NAMES: Record<string, string> = {
   en: 'English (US)', es: 'Español', fr: 'Français', de: 'Deutsch',
@@ -125,6 +125,46 @@ function HoldTimeChips({ value, onChange }: { value: number; onChange: (ms: numb
   )
 }
 
+const CRAFT_OPTIONS: { id: Craft; label: string; icon: 'needle' | 'loop' }[] = [
+  { id: 'knit',    label: 'Knit',    icon: 'needle' },
+  { id: 'crochet', label: 'Crochet', icon: 'loop'   },
+]
+
+function CraftChips({ value, onChange }: { value: Craft; onChange: (c: Craft) => void }) {
+  const { colors, fonts, radius } = useTheme()
+  return (
+    <View style={[styles.chipRow, { backgroundColor: colors.card, borderColor: colors.rule, borderRadius: radius.md }]}>
+      {CRAFT_OPTIONS.map((opt) => {
+        const active = opt.id === value
+        return (
+          <Pressable
+            key={opt.id}
+            onPress={() => onChange(opt.id)}
+            style={[
+              styles.craftChip,
+              {
+                backgroundColor: active ? colors.brick : colors.cream2,
+                borderRadius: radius.full,
+              },
+            ]}
+          >
+            <Icon name={opt.icon} size={14} color={active ? '#FBF6EC' : colors.inkSoft}/>
+            <Text style={{
+              fontFamily: fonts.mono,
+              fontSize: 12,
+              fontWeight: '700',
+              color: active ? '#FBF6EC' : colors.inkSoft,
+              letterSpacing: 0.3,
+            }}>
+              {opt.label}
+            </Text>
+          </Pressable>
+        )
+      })}
+    </View>
+  )
+}
+
 function MiniRow({ icon, label, accent, last }: { icon: string; label: string; accent?: string; last?: boolean }) {
   const { colors, fonts, fontSize } = useTheme()
   return (
@@ -144,9 +184,11 @@ export default function SettingsScreen() {
   const language      = useSettingsStore((s) => s.language)
   const holdTimeMs    = useSettingsStore((s) => s.holdTimeMs)
   const defaultCraft  = useSettingsStore((s) => s.defaultCraft)
-  const setTheme      = useSettingsStore((s) => s.setTheme)
-  const setHoldTimeMs = useSettingsStore((s) => s.setHoldTimeMs)
-  const [holdOpen, setHoldOpen] = useState(false)
+  const setTheme         = useSettingsStore((s) => s.setTheme)
+  const setHoldTimeMs    = useSettingsStore((s) => s.setHoldTimeMs)
+  const setDefaultCraft  = useSettingsStore((s) => s.setDefaultCraft)
+  const [holdOpen, setHoldOpen]   = useState(false)
+  const [craftOpen, setCraftOpen] = useState(false)
 
   return (
     <Screen>
@@ -171,7 +213,15 @@ export default function SettingsScreen() {
         {/* Settings rows */}
         <View style={{ gap: spacing[2] }}>
           <SettingsRow icon="globe"  iconColor={colors.forest}    title="Language"             value={LANGUAGE_NAMES[language] ?? 'English (US)'}/>
-          <SettingsRow icon="needle" iconColor={colors.brick}     title="Default craft"        value={defaultCraft === 'knit' ? 'Knit' : 'Crochet'}/>
+          <SettingsRow
+            icon="needle"
+            iconColor={colors.brick}
+            title="Default craft"
+            value={defaultCraft === 'knit' ? 'Knit' : 'Crochet'}
+            expanded={craftOpen}
+            onPress={() => setCraftOpen((v) => !v)}
+          />
+          {craftOpen && <CraftChips value={defaultCraft} onChange={setDefaultCraft}/>}
           <SettingsRow
             icon="bulb"
             iconColor={colors.mustardDk}
@@ -235,6 +285,7 @@ const styles = StyleSheet.create({
   settingsRow: { flexDirection: 'row', alignItems: 'center', gap: 12, borderWidth: 1, padding: 14 },
   chipRow:     { flexDirection: 'row', flexWrap: 'wrap', gap: 8, borderWidth: 1, padding: 10, justifyContent: 'center' },
   chip:        { paddingHorizontal: 14, paddingVertical: 8, minWidth: 52, alignItems: 'center' },
+  craftChip:   { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 14, paddingVertical: 8, minWidth: 84, justifyContent: 'center' },
   iconBadge:   { width: 38, height: 38, alignItems: 'center', justifyContent: 'center' },
   cloudCard:   { padding: 20, borderWidth: 1 },
   cloudHeader: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 8 },

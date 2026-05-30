@@ -4,6 +4,7 @@ import { View, Text, ScrollView, TextInput, Pressable, StyleSheet } from 'react-
 import { LinearGradient } from 'expo-linear-gradient'
 import { useTheme } from '../theme/ThemeContext'
 import { useLibraryStore } from '../store/libraryStore'
+import { useSettingsStore } from '../store/settingsStore'
 import Screen from '../components/ui/Screen'
 import AppBar from '../components/ui/AppBar'
 import Icon from '../components/ui/Icon'
@@ -108,8 +109,9 @@ function EmptyState() {
 export default function LibraryScreen() {
   const { colors, fonts, fontSize, spacing, radius } = useTheme()
   const { sequences, patterns, rows } = useLibraryStore()
+  const defaultCraft = useSettingsStore((s) => s.defaultCraft)
   const [tab, setTab] = useState<Tab>('seq')
-  const [craft, setCraft] = useState<CraftFilter>('all')
+  const [craft, setCraft] = useState<CraftFilter>(defaultCraft)
   const [query, setQuery] = useState('')
 
   const filterCraft = <T extends { craft: Craft }>(items: T[]) =>

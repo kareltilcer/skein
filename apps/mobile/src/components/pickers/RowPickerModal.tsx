@@ -4,6 +4,7 @@ import {BlurView} from 'expo-blur'
 import {useTheme} from '../../theme/ThemeContext'
 import {STITCH_MAP} from '../../tokens/stitches'
 import {useLibraryStore} from '../../store/libraryStore'
+import {useSettingsStore} from '../../store/settingsStore'
 import StitchGlyph from '../StitchGlyph'
 import Icon from '../ui/Icon'
 import type {Craft, LibraryRow} from '../../types'
@@ -35,8 +36,9 @@ export default function RowPickerModal({
   const { height: screenHeight } = useWindowDimensions()
 
   const rows = useLibraryStore(s => s.rows)
+  const userDefaultCraft = useSettingsStore(s => s.defaultCraft)
 
-  const defaultCraft: Craft | 'all' = craftFilter ?? 'all'
+  const defaultCraft: Craft | 'all' = craftFilter ?? userDefaultCraft
 
   const [sort,  setSort]  = useState<SortKey>('recent')
   const [craft, setCraft] = useState<Craft | 'all'>(defaultCraft)

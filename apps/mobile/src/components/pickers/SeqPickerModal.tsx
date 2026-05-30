@@ -7,6 +7,7 @@ import { BlurView } from 'expo-blur'
 import { useTheme } from '../../theme/ThemeContext'
 import { STITCH_MAP } from '../../tokens/stitches'
 import { useLibraryStore } from '../../store/libraryStore'
+import { useSettingsStore } from '../../store/settingsStore'
 import StitchGlyph from '../StitchGlyph'
 import Icon from '../ui/Icon'
 import type { LibrarySequence, LibraryPattern, Craft } from '../../types'
@@ -35,8 +36,9 @@ export default function SeqPickerModal({
 
   const sequences = useLibraryStore(s => s.sequences)
   const patterns  = useLibraryStore(s => s.patterns)
+  const userDefaultCraft = useSettingsStore(s => s.defaultCraft)
 
-  const defaultCraft: Craft | 'all' = craftFilter ?? 'all'
+  const defaultCraft: Craft | 'all' = craftFilter ?? userDefaultCraft
 
   const [mode,  setMode]  = useState<Mode>('sequence')
   const [craft, setCraft] = useState<Craft | 'all'>(defaultCraft)
