@@ -2,8 +2,8 @@ import React, { useRef } from 'react'
 import { View, Text, Pressable, StyleSheet } from 'react-native'
 import Svg, { Rect } from 'react-native-svg'
 import Animated, {
-  useSharedValue, useAnimatedProps, withTiming, cancelAnimation, runOnJS,
-  Easing,
+  useSharedValue, useAnimatedProps, useAnimatedStyle,
+  withTiming, cancelAnimation, runOnJS, Easing,
 } from 'react-native-reanimated'
 import * as Haptics from 'expo-haptics'
 import { useTheme } from '../theme/ThemeContext'
@@ -11,61 +11,86 @@ import { useTheme } from '../theme/ThemeContext'
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const AnimatedRect = Animated.createAnimatedComponent(Rect) as any
 
+type Variant = 'primary' | 'ghost'
+
 type Props = {
-  label: string
+  variant?: Variant
+  label?: string
   sub?: string
+  icon?: React.ReactNode
   holdMs?: number
   color?: string
   ringColor?: string
   textColor?: string
+  borderColor?: string
   height?: number
+  width?: number
+  ringStrokeWidth?: number
+  pressScale?: number
   onComplete?: () => void
 }
 
-const RING_H = 88
-const RING_SW = 6
-
 export default function HoldButton({
-  label, sub,
+  variant = 'primary',
+  label, sub, icon,
   holdMs = 3000,
   color,
-  ringColor = '#FFD986',
+  ringColor,
   textColor = '#FBF6EC',
-  height = RING_H,
+  borderColor,
+  height = 88,
+  width,
+  ringStrokeWidth,
+  pressScale,
   onComplete,
 }: Props) {
-  const { colors } = useTheme()
-  const btnColor = color ?? colors.brick
+  const { colors, fonts } = useTheme()
+  const accent = color ?? colors.brick
+  const ring = ringColor ?? colors.mustard
+  const sw = ringStrokeWidth ?? (variant === 'ghost' ? 5 : 6)
+  const scaleTarget = pressScale ?? (variant === 'ghost' ? 0.96 : 0.985)
 
-  const [width, setWidth] = React.useState(320)
+  const isGhost = variant === 'ghost'
+  const bg = isGhost ? colors.card : accent
+  const stroke = isGhost ? (borderColor ?? `${accent}33`) : 'transparent'
+
+  const [autoWidth, setAutoWidth] = React.useState(width ?? 320)
+  const measuredWidth = width ?? autoWidth
+
   const progress = useSharedValue(0)
+  const scale = useSharedValue(1)
   const isHolding = useRef(false)
 
-  const r = height / 2
-  const perimeter = 2 * Math.max(0, width - height) + 2 * Math.PI * (r - RING_SW / 2)
+  const r = Math.min(measuredWidth, height) / 2
+  const perimeter = 2 * Math.abs(measuredWidth - height) + 2 * Math.PI * (r - sw / 2)
 
   const handleComplete = () => {
     isHolding.current = false
+    progress.value = 0
+    scale.value = withTiming(1, { duration: 120 })
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
     onComplete?.()
   }
 
-  const animatedProps = useAnimatedProps(() => ({
+  const animatedRingProps = useAnimatedProps(() => ({
     strokeDashoffset: perimeter * (1 - progress.value),
     opacity: progress.value > 0 ? 1 : 0,
+  }))
+
+  const containerStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
   }))
 
   const startHold = () => {
     if (isHolding.current) return
     isHolding.current = true
     progress.value = 0
+    scale.value = withTiming(scaleTarget, { duration: 120, easing: Easing.out(Easing.quad) })
     progress.value = withTiming(1, {
       duration: holdMs,
       easing: Easing.linear,
     }, (finished?: boolean) => {
-      if (finished) {
-        runOnJS(handleComplete)()
-      }
+      if (finished) runOnJS(handleComplete)()
     })
   }
 
@@ -74,54 +99,95 @@ export default function HoldButton({
     isHolding.current = false
     cancelAnimation(progress)
     progress.value = withTiming(0, { duration: 200 })
+    scale.value = withTiming(1, { duration: 120, easing: Easing.out(Easing.quad) })
   }
 
+  const shadowStyle = isGhost
+    ? null
+    : {
+      shadowColor: accent,
+      shadowOffset: { width: 0, height: 10 },
+      shadowOpacity: 0.32,
+      shadowRadius: 20,
+      elevation: 8,
+    }
+
+  const wrapper = (
+    <Animated.View style={[{ height, width: measuredWidth }, containerStyle]}>
+      <Pressable
+        onPressIn={startHold}
+        onPressOut={stopHold}
+        style={[
+          styles.pill,
+          {
+            height,
+            borderRadius: r,
+            backgroundColor: bg,
+            borderWidth: isGhost ? 1.5 : 0,
+            borderColor: stroke,
+          },
+          shadowStyle,
+        ]}
+      >
+        {icon ? <View style={styles.iconWrap}>{icon}</View> : null}
+        {label ? (
+          <Text style={{
+            fontFamily: fonts.display,
+            color: textColor,
+            fontSize: 28,
+            letterSpacing: -0.3,
+          }}>
+            {label}
+          </Text>
+        ) : null}
+        {sub ? (
+          <Text style={{
+            fontFamily: fonts.body,
+            color: textColor,
+            fontSize: 12,
+            letterSpacing: 0.5,
+            textTransform: 'uppercase',
+            opacity: 0.85,
+            marginTop: 2,
+          }}>
+            {sub}
+          </Text>
+        ) : null}
+      </Pressable>
+
+      <Svg
+        width={measuredWidth}
+        height={height}
+        viewBox={`0 0 ${measuredWidth} ${height}`}
+        style={{ position: 'absolute', top: 0, left: 0 }}
+        pointerEvents="none"
+      >
+        <AnimatedRect
+          x={sw / 2}
+          y={sw / 2}
+          width={measuredWidth - sw}
+          height={height - sw}
+          rx={r - sw / 2}
+          fill="none"
+          stroke={ring}
+          strokeWidth={sw}
+          strokeDasharray={perimeter}
+          strokeLinecap="round"
+          animatedProps={animatedRingProps}
+        />
+      </Svg>
+    </Animated.View>
+  )
+
+  if (width) {
+    return wrapper
+  }
   return (
     <View
       style={{ width: '100%' }}
-      onLayout={(e) => setWidth(e.nativeEvent.layout.width)}
+      onLayout={(e) => setAutoWidth(e.nativeEvent.layout.width)}
     >
-      <View style={{ position: 'relative', height, width }}>
-        {/* Button body */}
-        <Pressable
-          onPressIn={startHold}
-          onPressOut={stopHold}
-          style={[
-            styles.pill,
-            { height, borderRadius: r, backgroundColor: btnColor },
-          ]}
-        >
-          <Text style={[styles.label, { fontFamily: 'Caprasimo_400Regular', color: textColor }]}>
-            {label}
-          </Text>
-          {sub ? (
-            <Text style={[styles.sub, { color: textColor }]}>{sub}</Text>
-          ) : null}
-        </Pressable>
-
-        {/* Progress ring */}
-        <Svg
-          width={width}
-          height={height}
-          viewBox={`0 0 ${width} ${height}`}
-          style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, transform: [{ rotate: '-90deg' }] }}
-          pointerEvents="none"
-        >
-          <AnimatedRect
-            x={RING_SW / 2}
-            y={RING_SW / 2}
-            width={width - RING_SW}
-            height={height - RING_SW}
-            rx={r - RING_SW / 2}
-            fill="none"
-            stroke={ringColor}
-            strokeWidth={RING_SW}
-            strokeDasharray={perimeter}
-            strokeLinecap="round"
-            animatedProps={animatedProps}
-          />
-        </Svg>
-      </View>
+      {wrapper}
     </View>
   )
 }
@@ -131,17 +197,10 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 4,
+    gap: 2,
   },
-  label: {
-    fontSize: 28,
-    letterSpacing: -0.3,
-  },
-  sub: {
-    fontSize: 11,
-    fontWeight: '600',
-    letterSpacing: 1.2,
-    textTransform: 'uppercase',
-    opacity: 0.85,
+  iconWrap: {
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 })
