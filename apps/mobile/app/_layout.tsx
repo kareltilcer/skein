@@ -4,6 +4,7 @@ import { Stack as _Stack } from 'expo-router'
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const Stack = _Stack as any
 import { StatusBar } from 'expo-status-bar'
+import { useColorScheme } from 'react-native'
 import { SafeAreaProvider } from 'react-native-safe-area-context'
 import { GestureHandlerRootView } from 'react-native-gesture-handler'
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet'
@@ -17,7 +18,9 @@ import { useSettingsStore } from '../src/store/settingsStore'
 SplashScreen.preventAutoHideAsync()
 
 function RootLayout() {
-  const theme = useSettingsStore((s) => s.theme)
+  const themePref = useSettingsStore((s) => s.theme)
+  const systemScheme = useColorScheme()
+  const theme = themePref === 'auto' ? (systemScheme === 'dark' ? 'dark' : 'light') : themePref
 
   const [fontsLoaded] = useFonts({
     Caprasimo_400Regular,

@@ -26,9 +26,11 @@ function SectionLabel({ children }: { children: string }) {
 
 function ThemeCard({ mode, active, onPress }: { mode: Theme; active: boolean; onPress: () => void }) {
   const { colors, fonts, radius } = useTheme()
-  const swatch  = mode === 'dark' ? darkColors.bg   : lightColors.bg
-  const accent  = mode === 'dark' ? darkColors.brick : lightColors.brick
-  const label   = mode === 'dark' ? 'Dark'  : 'Light'
+  const isAuto = mode === 'auto'
+  const isDark = mode === 'dark'
+  const swatch = isDark ? darkColors.bg : lightColors.bg
+  const accent = isDark ? darkColors.brick : lightColors.brick
+  const label  = isAuto ? 'Auto' : isDark ? 'Dark' : 'Light'
   return (
     <Pressable
       onPress={onPress}
@@ -43,17 +45,53 @@ function ThemeCard({ mode, active, onPress }: { mode: Theme; active: boolean; on
         },
       ]}
     >
-      <View style={[styles.themeSwatch, { backgroundColor: swatch, borderRadius: radius.sm }]}>
-        <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: accent }}/>
-        {mode === 'dark' && (
+      <View
+        style={[
+          styles.themeSwatch,
+          { borderRadius: radius.sm, overflow: 'hidden', backgroundColor: isAuto ? undefined : swatch },
+        ]}
+      >
+        {isAuto && (
+          <LinearGradient
+            colors={[lightColors.bg, lightColors.bg, darkColors.bg, darkColors.bg]}
+            locations={[0, 0.5, 0.5, 1]}
+            start={{ x: 0, y: 1 }}
+            end={{ x: 1, y: 0 }}
+            style={StyleSheet.absoluteFill}
+          />
+        )}
+        {isAuto ? (
+          <View style={{ width: 28, height: 28, borderRadius: 14, overflow: 'hidden' }}>
+            <LinearGradient
+              colors={[lightColors.brick, lightColors.brick, darkColors.brick, darkColors.brick]}
+              locations={[0, 0.5, 0.5, 1]}
+              start={{ x: 0, y: 1 }}
+              end={{ x: 1, y: 0 }}
+              style={StyleSheet.absoluteFill}
+            />
+          </View>
+        ) : (
+          <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: accent }}/>
+        )}
+        {isDark && (
           <View style={styles.moonBadge}>
             <Icon name="moon" size={12} color={accent}/>
+          </View>
+        )}
+        {isAuto && (
+          <View style={styles.moonBadge}>
+            <Icon name="sparkle" size={12} color="#FBF6EC"/>
           </View>
         )}
       </View>
       <Text style={{ fontFamily: fonts.bodySb, fontSize: 12, color: active ? colors.brick : colors.ink, marginTop: 8 }}>
         {label}
       </Text>
+      {isAuto && (
+        <Text style={{ fontFamily: fonts.mono, fontSize: 8.5, color: colors.inkMute, letterSpacing: 0.8, textTransform: 'uppercase', marginTop: 2 }}>
+          Matches OS
+        </Text>
+      )}
     </Pressable>
   )
 }
@@ -211,11 +249,12 @@ export default function SettingsScreen() {
           <View style={styles.themeRow}>
             <ThemeCard mode="light" active={theme === 'light'} onPress={() => setTheme('light')}/>
             <ThemeCard mode="dark"  active={theme === 'dark'}  onPress={() => setTheme('dark')}/>
+            <ThemeCard mode="auto"  active={theme === 'auto'}  onPress={() => setTheme('auto')}/>
           </View>
           <View style={[styles.infoCard, { backgroundColor: colors.card, borderColor: colors.rule, borderRadius: radius.md, marginTop: spacing[2] }]}>
             <Icon name="bulb" size={16} color={colors.mustardDk}/>
             <Text style={{ flex: 1, fontFamily: fonts.body, fontSize: 12.5, color: colors.inkSoft, lineHeight: 18 }}>
-              <Text style={{ color: colors.ink, fontWeight: '700' }}>Dark mode</Text> shifts everything to a deep warm red so your eyes stay relaxed during late-night knit-alongs.
+              <Text style={{ color: colors.ink, fontWeight: '700' }}>Auto</Text> follows your phone's system setting — light by day, dark at night. <Text style={{ color: colors.ink, fontWeight: '700' }}>Dark mode</Text> shifts everything to a deep warm red so your eyes stay relaxed during late-night knit-alongs.
             </Text>
           </View>
         </View>

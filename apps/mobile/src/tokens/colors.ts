@@ -1,4 +1,4 @@
-import type { Theme } from '../types'
+import type { ResolvedTheme } from '../types'
 
 export const lightColors = {
   bg:          '#F2EBDD',
@@ -60,6 +60,6 @@ export type ColorTokens = {
   tabBg:       string
 }
 
-export function getColors(theme: Theme): ColorTokens {
+export function getColors(theme: ResolvedTheme): ColorTokens {
   return theme === 'dark' ? darkColors : lightColors
 }

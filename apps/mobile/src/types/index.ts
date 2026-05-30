@@ -1,5 +1,6 @@
 export type Craft = 'knit' | 'crochet'
-export type Theme = 'light' | 'dark'
+export type Theme = 'light' | 'dark' | 'auto'
+export type ResolvedTheme = 'light' | 'dark'
 
 export type StitchDef = {
   id: string

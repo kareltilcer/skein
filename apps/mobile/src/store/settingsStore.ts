@@ -18,7 +18,7 @@ type SettingsStore = Settings & {
 export const useSettingsStore = create<SettingsStore>()(
   persist(
     (set) => ({
-      theme:            'light',
+      theme:            'auto',
       language:         'en',
       defaultCraft:     'knit',
       holdTimeMs:       3000,

@@ -2,10 +2,10 @@ import React, { createContext, useContext } from 'react'
 import { getColors, type ColorTokens } from '../tokens/colors'
 import { FontFamily, FontSize } from '../tokens/typography'
 import { Spacing, Radius } from '../tokens/spacing'
-import type { Theme } from '../types'
+import type { ResolvedTheme } from '../types'
 
 type ThemeContextValue = {
-  theme: Theme
+  theme: ResolvedTheme
   colors: ColorTokens
   fonts: typeof FontFamily
   fontSize: typeof FontSize
@@ -19,7 +19,7 @@ export function ThemeProvider({
   theme,
   children,
 }: {
-  theme: Theme
+  theme: ResolvedTheme
   children: React.ReactNode
 }) {
   const value: ThemeContextValue = {
