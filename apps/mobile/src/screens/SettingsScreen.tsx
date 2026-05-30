@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { View, Text, ScrollView, Pressable, StyleSheet } from 'react-native'
+import { View, Text, ScrollView, Pressable, StyleSheet, Share } from 'react-native'
 
 import { LinearGradient } from 'expo-linear-gradient'
 import { useTheme } from '../theme/ThemeContext'
@@ -165,10 +165,10 @@ function CraftChips({ value, onChange }: { value: Craft; onChange: (c: Craft) =>
   )
 }
 
-function MiniRow({ icon, label, accent, last }: { icon: string; label: string; accent?: string; last?: boolean }) {
+function MiniRow({ icon, label, accent, last, onPress }: { icon: string; label: string; accent?: string; last?: boolean; onPress?: () => void }) {
   const { colors, fonts, fontSize } = useTheme()
   return (
-    <Pressable style={[styles.miniRow, { borderBottomWidth: last ? 0 : 1, borderBottomColor: colors.rule }]}>
+    <Pressable onPress={onPress} style={[styles.miniRow, { borderBottomWidth: last ? 0 : 1, borderBottomColor: colors.rule }]}>
       <Icon name={icon as any} size={18} color={accent ?? colors.inkSoft}/>
       <Text style={{ flex: 1, fontFamily: fonts.body, fontSize: fontSize.sm, color: colors.ink, fontWeight: accent ? '700' : '500' }}>
         {label}
@@ -176,6 +176,17 @@ function MiniRow({ icon, label, accent, last }: { icon: string; label: string; a
       <Icon name="chevR" size={14} color={colors.inkMute}/>
     </Pressable>
   )
+}
+
+async function shareSkein() {
+  try {
+    await Share.share({
+      title: 'Skein — a cozy knitting companion',
+      message: "I've been using Skein to track my knitting & crochet projects — thought you might like it too. 🧶",
+    })
+  } catch {
+    // user cancelled or share unavailable — nothing to do
+  }
 }
 
 export default function SettingsScreen() {
@@ -260,10 +271,10 @@ export default function SettingsScreen() {
         <View>
           <SectionLabel>More</SectionLabel>
           <View style={[styles.moreGroup, { backgroundColor: colors.card, borderColor: colors.rule, borderRadius: radius.md }]}>
-            <MiniRow icon="save"    label="Export pattern as PDF"/>
-            <MiniRow icon="sparkle" label="Skein Pro · ad-free forever" accent={colors.mustardDk}/>
-            <MiniRow icon="user"    label="Tell a friend (please?)"/>
-            <MiniRow icon="book"    label="The little knitting glossary" last/>
+            {/*<MiniRow icon="save"    label="Export pattern as PDF"/>*/}
+            {/*<MiniRow icon="sparkle" label="Skein Pro · ad-free forever" accent={colors.mustardDk}/>*/}
+            <MiniRow icon="user"    label="Tell a friend (please?)" onPress={shareSkein}/>
+            {/*<MiniRow icon="book"    label="The little knitting glossary" last/>*/}
           </View>
         </View>
 
