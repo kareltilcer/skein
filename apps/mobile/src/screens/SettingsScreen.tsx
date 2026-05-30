@@ -8,7 +8,6 @@ import { lightColors, darkColors } from '../tokens/colors'
 import Screen from '../components/ui/Screen'
 import AppBar from '../components/ui/AppBar'
 import Icon from '../components/ui/Icon'
-import Btn from '../components/ui/Btn'
 import type { Theme, Craft } from '../types'
 
 const LANGUAGE_NAMES: Record<string, string> = {
@@ -258,12 +257,15 @@ export default function SettingsScreen() {
               <Text style={{ fontFamily: fonts.mono, fontSize: 11, color: colors.inkMute, letterSpacing: 0.5 }}>Totally optional. Always.</Text>
             </View>
           </View>
-          <Text style={{ fontFamily: fonts.body, fontSize: 13, color: colors.inkSoft, lineHeight: 19, marginBottom: spacing[4] }}>
-            Add an account to sync projects across devices and back up your pattern library. We won't pester you.
-          </Text>
-          <Btn variant="mustard" size="md" full>Create account</Btn>
-          <Text style={{ fontFamily: fonts.body, fontSize: 12, color: colors.inkSoft, textAlign: 'center', marginTop: spacing[2] }}>
-            already have one? <Text style={{ color: colors.brick, fontWeight: '700' }}>Sign in</Text>
+          {/*<Text style={{ fontFamily: fonts.body, fontSize: 13, color: colors.inkSoft, lineHeight: 19, marginBottom: spacing[4] }}>*/}
+          {/*  Add an account to sync projects across devices and back up your pattern library. We won't pester you.*/}
+          {/*</Text>*/}
+          {/*<Btn variant="mustard" size="md" full>Create account</Btn>*/}
+          {/*<Text style={{ fontFamily: fonts.body, fontSize: 12, color: colors.inkSoft, textAlign: 'center', marginTop: spacing[2] }}>*/}
+          {/*  already have one? <Text style={{ color: colors.brick, fontWeight: '700' }}>Sign in</Text>*/}
+          {/*</Text>*/}
+          <Text style={{ fontFamily: fonts.body, fontSize: 13, color: colors.inkSoft, lineHeight: 19 }}>
+            Still on the needles — cross-device sync and cloud backup is coming in a future updates. For now, your projects stay snug right here on this device.
           </Text>
         </LinearGradient>
 
