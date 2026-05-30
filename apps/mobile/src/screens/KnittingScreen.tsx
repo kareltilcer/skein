@@ -194,7 +194,7 @@ export default function KnittingScreen({ projectId }: Props) {
           <View style={{ flex: 1 }}>
             <HoldButton
               label="Row done"
-              sub="hold 3 sec"
+              sub={`hold ${(holdTimeMs / 1000).toFixed(1)} sec`}
               holdMs={holdTimeMs}
               color={colors.brick}
               ringColor={colors.mustard}

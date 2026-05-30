@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { View, Text, ScrollView, Pressable, StyleSheet } from 'react-native'
 
 import { LinearGradient } from 'expo-linear-gradient'
@@ -59,10 +59,20 @@ function ThemeCard({ mode, active, onPress }: { mode: Theme; active: boolean; on
   )
 }
 
-function SettingsRow({ icon, iconColor, title, value }: { icon: string; iconColor: string; title: string; value: string }) {
+function SettingsRow({
+  icon, iconColor, title, value, onPress, expanded,
+}: {
+  icon: string; iconColor: string; title: string; value: string
+  onPress?: () => void; expanded?: boolean
+}) {
   const { colors, fonts, fontSize, radius } = useTheme()
+  const expandable = expanded !== undefined
+  const Container: any = onPress ? Pressable : View
   return (
-    <View style={[styles.settingsRow, { backgroundColor: colors.card, borderColor: colors.rule, borderRadius: radius.md }]}>
+    <Container
+      onPress={onPress}
+      style={[styles.settingsRow, { backgroundColor: colors.card, borderColor: colors.rule, borderRadius: radius.md }]}
+    >
       <View style={[styles.iconBadge, { backgroundColor: colors.cream2, borderRadius: 10 }]}>
         <Icon name={icon as any} size={20} color={iconColor}/>
       </View>
@@ -70,7 +80,47 @@ function SettingsRow({ icon, iconColor, title, value }: { icon: string; iconColo
         <Text style={{ fontFamily: fonts.bodySb, fontSize: fontSize.sm, color: colors.ink }}>{title}</Text>
         <Text style={{ fontFamily: fonts.mono, fontSize: 11, color: colors.inkMute, marginTop: 2 }}>{value}</Text>
       </View>
-      <Icon name="chevR" size={16} color={colors.inkMute}/>
+      <Icon
+        name={expandable ? 'chevDown' : 'chevR'}
+        size={16}
+        color={expandable && expanded ? colors.brick : colors.inkMute}
+      />
+    </Container>
+  )
+}
+
+const HOLD_TIME_PRESETS_MS = [1000, 2000, 3000, 4000, 5000]
+
+function HoldTimeChips({ value, onChange }: { value: number; onChange: (ms: number) => void }) {
+  const { colors, fonts, radius } = useTheme()
+  return (
+    <View style={[styles.chipRow, { backgroundColor: colors.card, borderColor: colors.rule, borderRadius: radius.md }]}>
+      {HOLD_TIME_PRESETS_MS.map((ms) => {
+        const active = ms === value
+        return (
+          <Pressable
+            key={ms}
+            onPress={() => onChange(ms)}
+            style={[
+              styles.chip,
+              {
+                backgroundColor: active ? colors.brick : colors.cream2,
+                borderRadius: radius.full,
+              },
+            ]}
+          >
+            <Text style={{
+              fontFamily: fonts.mono,
+              fontSize: 12,
+              fontWeight: '700',
+              color: active ? '#FBF6EC' : colors.inkSoft,
+              letterSpacing: 0.3,
+            }}>
+              {(ms / 1000).toFixed(1)}s
+            </Text>
+          </Pressable>
+        )
+      })}
     </View>
   )
 }
@@ -95,6 +145,8 @@ export default function SettingsScreen() {
   const holdTimeMs    = useSettingsStore((s) => s.holdTimeMs)
   const defaultCraft  = useSettingsStore((s) => s.defaultCraft)
   const setTheme      = useSettingsStore((s) => s.setTheme)
+  const setHoldTimeMs = useSettingsStore((s) => s.setHoldTimeMs)
+  const [holdOpen, setHoldOpen] = useState(false)
 
   return (
     <Screen>
@@ -120,7 +172,15 @@ export default function SettingsScreen() {
         <View style={{ gap: spacing[2] }}>
           <SettingsRow icon="globe"  iconColor={colors.forest}    title="Language"             value={LANGUAGE_NAMES[language] ?? 'English (US)'}/>
           <SettingsRow icon="needle" iconColor={colors.brick}     title="Default craft"        value={defaultCraft === 'knit' ? 'Knit' : 'Crochet'}/>
-          <SettingsRow icon="bulb"   iconColor={colors.mustardDk} title="Hold time to advance" value={`${(holdTimeMs / 1000).toFixed(1)} seconds`}/>
+          <SettingsRow
+            icon="bulb"
+            iconColor={colors.mustardDk}
+            title="Hold time to advance"
+            value={`${(holdTimeMs / 1000).toFixed(1)} seconds`}
+            expanded={holdOpen}
+            onPress={() => setHoldOpen((v) => !v)}
+          />
+          {holdOpen && <HoldTimeChips value={holdTimeMs} onChange={setHoldTimeMs}/>}
         </View>
 
         {/* Cloud backup */}
@@ -173,6 +233,8 @@ const styles = StyleSheet.create({
   moonBadge:   { position: 'absolute', top: 6, right: 8 },
   infoCard:    { flexDirection: 'row', alignItems: 'flex-start', gap: 10, padding: 12, borderWidth: 1 },
   settingsRow: { flexDirection: 'row', alignItems: 'center', gap: 12, borderWidth: 1, padding: 14 },
+  chipRow:     { flexDirection: 'row', flexWrap: 'wrap', gap: 8, borderWidth: 1, padding: 10, justifyContent: 'center' },
+  chip:        { paddingHorizontal: 14, paddingVertical: 8, minWidth: 52, alignItems: 'center' },
   iconBadge:   { width: 38, height: 38, alignItems: 'center', justifyContent: 'center' },
   cloudCard:   { padding: 20, borderWidth: 1 },
   cloudHeader: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 8 },
