@@ -3,6 +3,7 @@ export const FontFamily = {
   body:    'DMSans_400Regular',
   bodyMd:  'DMSans_500Medium',
   bodySb:  'DMSans_600SemiBold',
+  bodyBd:  'DMSans_700Bold',
   mono:    'DMMono_400Regular',
 } as const
 

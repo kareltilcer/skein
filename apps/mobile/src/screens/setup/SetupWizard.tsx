@@ -12,7 +12,12 @@ import Icon from '../../components/ui/Icon'
 import Btn from '../../components/ui/Btn'
 import IconBtn from '../../components/ui/IconBtn'
 import StitchGlyph from '../../components/StitchGlyph'
-import type {StitchInstance, Craft} from '../../types'
+import StitchPickerModal from '../../components/pickers/StitchPickerModal'
+import RowPickerModal from '../../components/pickers/RowPickerModal'
+import SeqPickerModal from '../../components/pickers/SeqPickerModal'
+import DefineCustomStitchScreen from './DefineCustomStitchScreen'
+import {useLibraryStore} from '../../store/libraryStore'
+import type {StitchInstance, Craft, StitchDef, LibraryRow, LibrarySequence, LibraryPattern} from '../../types'
 import _DraggableFlatList, {ScaleDecorator as _ScaleDecorator} from 'react-native-draggable-flatlist'
 const DraggableFlatList = _DraggableFlatList as any
 const ScaleDecorator = _ScaleDecorator as any
@@ -86,6 +91,10 @@ type Draft = {
     parts: DraftPart[]
     partsCustomized?: boolean   // true once user has explicitly added a part
 }
+
+// Stitch chip color groups — matches design's semantic grouping (brick=knit, mustard=purl, forest=other)
+const STITCH_BRICK   = new Set(['k', 'sl', 'kfb', 'm1'])
+const STITCH_MUSTARD = new Set(['p', 'p2tog', 'mb'])
 
 function uuid4() {
     return Math.random().toString(36).slice(2) + Date.now().toString(36)
@@ -974,19 +983,96 @@ function Step2({draft, onChange}: { draft: Draft; onChange: (d: Draft) => void }
 
 // ── Step 3 ─────────────────────────────────────────────────────
 function Step3({draft, onChange}: { draft: Draft; onChange: (d: Draft) => void }) {
-    const {colors, fonts, fontSize, spacing, radius} = useTheme()
+    const {colors, fonts, spacing} = useTheme()
+    const recentStitchIds  = useSettingsStore(s => s.recentStitchIds)
+    const recordStitchUsed = useSettingsStore(s => s.recordStitchUsed)
+
     const [activePart, setActivePart] = useState(0)
     const [activeRow, setActiveRow] = useState<{partIdx: number; seqIdx: number; rowIdx: number} | null>(null)
-    const [showFullPicker, setShowFullPicker] = useState(false)
+    const [showStitchPicker, setShowStitchPicker] = useState(false)
+    const [showDefineCustom, setShowDefineCustom] = useState(false)
+    const [showRowPicker, setShowRowPicker] = useState(false)
+    const [rowPickerSeqIdx, setRowPickerSeqIdx] = useState<number | null>(null)
+    const [showSeqPicker, setShowSeqPicker] = useState(false)
+    const [focusedSeq, setFocusedSeq] = useState<number | null>(null)
+    const [collapsedSeqs, setCollapsedSeqs] = useState<Set<string>>(new Set())
+    const [confirmDialog, setConfirmDialog] = useState<{seqIdx: number; rowIdx: number} | null>(null)
+    const [confirmSeqDialog, setConfirmSeqDialog] = useState<{seqIdx: number} | null>(null)
+
+    const libraryRows      = useLibraryStore(s => s.rows)
+    const librarySequences = useLibraryStore(s => s.sequences)
+    const libraryPatterns  = useLibraryStore(s => s.patterns)
+
+    const toggleSeqCollapse = (seqId: string) => {
+        setCollapsedSeqs(prev => {
+            const next = new Set(prev)
+            next.has(seqId) ? next.delete(seqId) : next.add(seqId)
+            return next
+        })
+    }
 
     const part = draft.parts[activePart]
-    const quickStitches = STITCHES.filter(s => s.type === draft.craft).slice(0, 6)
+
+    // Dock stitches — most recently used (for current craft), falling back to defaults
+    const QUICK_KNIT    = ['k', 'p', 'yo', 'k2tog', 'ssk', 'sl']
+    const QUICK_CROCHET = ['sc', 'dc', 'hdc', 'ch', 'slst', 'tr']
+    const dockDefaults  = draft.craft === 'knit' ? QUICK_KNIT : QUICK_CROCHET
+
+    const craftRecent = recentStitchIds.filter(id => STITCH_MAP[id]?.type === draft.craft)
+    const dockIds: string[] = [...craftRecent]
+    for (const id of dockDefaults) {
+        if (dockIds.length >= 6) break
+        if (!dockIds.includes(id)) dockIds.push(id)
+    }
+    const dockStitches = dockIds.slice(0, 6)
+        .map(id => STITCH_MAP[id])
+        .filter((s): s is NonNullable<typeof s> => !!s)
+
     const totalStitchCount = STITCHES.filter(s => s.type === draft.craft).length
 
     const addRow = (seqIdx: number) => {
         const seq = part!.sequences[seqIdx]!
         const newRow: DraftRow = {id: uuid4(), label: `Row ${seq.rows.length + 1}`, stitches: []}
+        const newRowIdx = seq.rows.length
         updateSeq(activePart, seqIdx, {...seq, rows: [...seq.rows, newRow]})
+        setActiveRow({partIdx: activePart, seqIdx, rowIdx: newRowIdx})
+        setShowStitchPicker(false)
+    }
+
+    const addRowFromLib = (seqIdx: number, libRow: LibraryRow) => {
+        const seq = part!.sequences[seqIdx]!
+        const newRow: DraftRow = {id: uuid4(), label: libRow.label, stitches: libRow.stitches}
+        const newRowIdx = seq.rows.length
+        updateSeq(activePart, seqIdx, {...seq, rows: [...seq.rows, newRow]})
+        setActiveRow({partIdx: activePart, seqIdx, rowIdx: newRowIdx})
+        setShowRowPicker(false)
+    }
+
+    const addSeqFromLib = (libSeq: LibrarySequence) => {
+        const newSeq: DraftSequence = {
+            id: uuid4(), name: libSeq.name,
+            rows: libSeq.rows.map(r => ({...r, id: uuid4()})),
+            totalRepeats: libSeq.totalRepeats,
+            loop: libSeq.loop,
+        }
+        const updatedPart = {...part!, sequences: [...part!.sequences, newSeq]}
+        onChange({...draft, parts: draft.parts.map((p, i) => i === activePart ? updatedPart : p)})
+        setShowSeqPicker(false)
+    }
+
+    const addPatternFromLib = (libPat: LibraryPattern) => {
+        const newSeqs: DraftSequence[] = libPat.sequenceIds
+            .map(id => librarySequences.find(s => s.id === id))
+            .filter((s): s is LibrarySequence => Boolean(s))
+            .map(libSeq => ({
+                id: uuid4(), name: libSeq.name,
+                rows: libSeq.rows.map(r => ({...r, id: uuid4()})),
+                totalRepeats: libSeq.totalRepeats,
+                loop: libSeq.loop,
+            }))
+        const updatedPart = {...part!, sequences: [...part!.sequences, ...newSeqs]}
+        onChange({...draft, parts: draft.parts.map((p, i) => i === activePart ? updatedPart : p)})
+        setShowSeqPicker(false)
     }
 
     const removeRow = (seqIdx: number, rowIdx: number) => {
@@ -995,9 +1081,44 @@ function Step3({draft, onChange}: { draft: Draft; onChange: (d: Draft) => void }
         if (activeRow?.seqIdx === seqIdx && activeRow?.rowIdx === rowIdx) setActiveRow(null)
     }
 
-    const clearRow = (seqIdx: number, rowIdx: number) => {
+    const confirmRemoveRow = (seqIdx: number, rowIdx: number) => {
+        setConfirmDialog({seqIdx, rowIdx})
+    }
+
+    const executeRemoveRow = () => {
+        if (!confirmDialog) return
+        removeRow(confirmDialog.seqIdx, confirmDialog.rowIdx)
+        setConfirmDialog(null)
+    }
+
+    const removeSeq = (seqIdx: number) => {
+        const updatedPart = {...part!, sequences: part!.sequences.filter((_, i) => i !== seqIdx)}
+        onChange({...draft, parts: draft.parts.map((p, i) => i === activePart ? updatedPart : p)})
+        setFocusedSeq(null)
+        if (activeRow?.seqIdx === seqIdx) setActiveRow(null)
+        else if (activeRow && activeRow.seqIdx > seqIdx) setActiveRow({...activeRow, seqIdx: activeRow.seqIdx - 1})
+    }
+
+    const confirmRemoveSeq = (seqIdx: number) => setConfirmSeqDialog({seqIdx})
+
+    const executeRemoveSeq = () => {
+        if (!confirmSeqDialog) return
+        removeSeq(confirmSeqDialog.seqIdx)
+        setConfirmSeqDialog(null)
+    }
+
+    const removeLastStitch = (seqIdx: number, rowIdx: number) => {
         const seq = part!.sequences[seqIdx]!
-        updateSeq(activePart, seqIdx, {...seq, rows: seq.rows.map((r, i) => i === rowIdx ? {...r, stitches: []} : r)})
+        const row = seq.rows[rowIdx]!
+        if (row.stitches.length === 0) return
+        const last = row.stitches[row.stitches.length - 1]!
+        const newStitches = last.count > 1
+            ? [...row.stitches.slice(0, -1), {...last, count: last.count - 1}]
+            : row.stitches.slice(0, -1)
+        updateSeq(activePart, seqIdx, {
+            ...seq,
+            rows: seq.rows.map((r, i) => i === rowIdx ? {...r, stitches: newStitches} : r),
+        })
     }
 
     const addSeq = () => {
@@ -1026,59 +1147,174 @@ function Step3({draft, onChange}: { draft: Draft; onChange: (d: Draft) => void }
                 : [...row.stitches, {stitchId, count: 1}]
         const seq = draft.parts[partIdx]!.sequences[seqIdx]!
         updateSeq(partIdx, seqIdx, {...seq, rows: seq.rows.map((r, i) => i === rowIdx ? {...r, stitches: newStitches} : r)})
+        recordStitchUsed(stitchId)
+    }
+
+    const handlePickerSelect = (stitch: StitchDef) => {
+        if (!activeRow) return
+        addStitchToRow(activeRow.partIdx, activeRow.seqIdx, activeRow.rowIdx, stitch.id)
+        setShowStitchPicker(false)
     }
 
     if (!part) return null
 
-    const dockVisible = activeRow !== null && !showFullPicker
+    const dockVisible = activeRow !== null && !showStitchPicker
 
     return (
         <View style={{flex: 1}}>
-            <ScrollView contentContainerStyle={{padding: spacing[4], paddingBottom: dockVisible ? 240 : 140}}>
+            <ScrollView
+                contentContainerStyle={{paddingHorizontal: spacing[5], paddingBottom: dockVisible ? 220 : 160}}
+                keyboardShouldPersistTaps="handled"
+            >
                 {/* Part tabs */}
                 {draft.parts.length > 1 && (
-                    <View style={[styles.tabRow2, {backgroundColor: colors.cream2, borderRadius: radius.md, marginBottom: spacing[4]}]}>
+                    <View style={[styles.tabRow2, {backgroundColor: colors.cream2, borderRadius: 12, marginBottom: spacing[4]}]}>
                         {draft.parts.map((p, i) => (
                             <Pressable
                                 key={p.id}
-                                onPress={() => { setActivePart(i); setActiveRow(null) }}
-                                style={[styles.tabBtn2, {backgroundColor: activePart === i ? colors.card : 'transparent', borderRadius: radius.sm}]}
+                                onPress={() => { setActivePart(i); setActiveRow(null); setFocusedSeq(null) }}
+                                style={[styles.tabBtn2, {
+                                    flexDirection: 'row', gap: 5,
+                                    backgroundColor: activePart === i ? colors.card : 'transparent',
+                                    borderRadius: 9,
+                                    ...(activePart === i ? {
+                                        shadowColor: '#000',
+                                        shadowOffset: {width: 0, height: 1},
+                                        shadowOpacity: 0.06,
+                                        shadowRadius: 3,
+                                        elevation: 1,
+                                    } : {}),
+                                }]}
                             >
                                 <Text style={{fontFamily: fonts.bodySb, fontSize: 12, color: activePart === i ? colors.brick : colors.inkSoft}}>
                                     {p.name}
+                                </Text>
+                                <Text style={{
+                                    fontFamily: fonts.mono, fontSize: 9.5, fontWeight: '700', color: colors.inkMute,
+                                    backgroundColor: activePart === i ? colors.cream2 : 'transparent',
+                                    paddingHorizontal: activePart === i ? 5 : 0, paddingVertical: 1,
+                                    borderRadius: 5, letterSpacing: 0.5,
+                                }}>
+                                    {p.sequences.length}
                                 </Text>
                             </Pressable>
                         ))}
                     </View>
                 )}
 
-                {part.sequences.map((seq, si) => (
-                    <View key={seq.id} style={{marginBottom: spacing[5]}}>
-                        {/* Sequence name — full card with brick border */}
-                        <View style={{
-                            backgroundColor: colors.card,
-                            borderWidth: 2, borderColor: colors.brick, borderRadius: 16,
-                            paddingVertical: 14, paddingHorizontal: 16, marginBottom: 16,
-                        }}>
-                            <TextInput
-                                value={seq.name}
-                                onChangeText={(t) => updateSeq(activePart, si, {...seq, name: t})}
-                                style={{fontFamily: fonts.display, fontSize: 22, color: colors.ink, letterSpacing: -0.5}}
-                            />
+                <View style={{gap: 18}}>
+                {part.sequences.map((seq, si) => {
+                    const seqColor = [colors.mustard, colors.brick, colors.forest][si % 3]!
+                    const totalSts = seq.rows.reduce((sum, r) => sum + r.stitches.reduce((s2, st) => s2 + st.count, 0), 0)
+                    const isEditing = focusedSeq === si
+                    return (
+                    <View key={seq.id}>
+                        {/* Sequence header */}
+                        <View
+                            style={{
+                                backgroundColor: colors.card,
+                                borderWidth: isEditing ? 2 : 1,
+                                borderColor: isEditing ? colors.brick : colors.rule,
+                                borderRadius: 16,
+                                paddingVertical: 12, paddingHorizontal: 14,
+                                marginBottom: 8,
+                                ...(isEditing ? {
+                                    shadowColor: colors.brick,
+                                    shadowOpacity: 0.07,
+                                    shadowRadius: 6,
+                                    shadowOffset: {width: 0, height: 0},
+                                    elevation: 2,
+                                } : {}),
+                            }}
+                        >
+                            <View style={{flexDirection: 'row', alignItems: 'center', gap: 10}}>
+                                {/* Numbered colour tile */}
+                                <View style={{
+                                    width: 32, height: 32, borderRadius: 9,
+                                    backgroundColor: seqColor,
+                                    alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                                    shadowColor: seqColor,
+                                    shadowOffset: {width: 0, height: 4},
+                                    shadowOpacity: 0.35,
+                                    shadowRadius: 4,
+                                    elevation: 4,
+                                }}>
+                                    <Text style={{fontFamily: fonts.display, fontSize: 16, color: '#FBF6EC'}}>
+                                        {si + 1}
+                                    </Text>
+                                </View>
+
+                                {/* Name + subtitle */}
+                                <View style={{flex: 1, minWidth: 0}}>
+                                    {isEditing ? (
+                                        <TextInput
+                                            value={seq.name}
+                                            onChangeText={(t) => updateSeq(activePart, si, {...seq, name: t})}
+                                            onBlur={() => setFocusedSeq(null)}
+                                            autoFocus
+                                            cursorColor={colors.brick}
+                                            selectionColor={colors.brick}
+                                            style={{
+                                                fontFamily: fonts.display, fontSize: 20,
+                                                color: colors.ink, letterSpacing: -0.2,
+                                                padding: 0, margin: 0,
+                                            }}
+                                        />
+                                    ) : (
+                                        <Text style={{
+                                            fontFamily: fonts.display, fontSize: 20,
+                                            color: colors.ink, letterSpacing: -0.2, lineHeight: 24,
+                                        }} numberOfLines={1}>
+                                            {seq.name}
+                                        </Text>
+                                    )}
+                                    <Text style={{fontFamily: fonts.mono, fontSize: 10.5, color: colors.inkMute, marginTop: 3}}>
+                                        {seq.rows.length} rows · {totalSts} sts
+                                        {isEditing && (
+                                            <Text style={{color: colors.brick, fontWeight: '700'}}> · editing ✱</Text>
+                                        )}
+                                    </Text>
+                                </View>
+
+                                {/* Editing → destructive Delete pill; otherwise → edit + chevron */}
+                                {isEditing ? (
+                                    <Pressable
+                                        onPress={() => confirmRemoveSeq(si)}
+                                        hitSlop={6}
+                                        style={{
+                                            flexDirection: 'row', alignItems: 'center', gap: 5,
+                                            backgroundColor: '#FBEFEA',
+                                            borderWidth: 1, borderColor: 'rgba(156,61,46,0.22)',
+                                            borderRadius: 9, paddingHorizontal: 9, paddingVertical: 6,
+                                            flexShrink: 0,
+                                        }}
+                                    >
+                                        <Icon name="trash" size={13} color={colors.brick}/>
+                                        <Text style={{
+                                            fontFamily: fonts.mono, fontSize: 9.5, fontWeight: '700',
+                                            color: colors.brick, letterSpacing: 1.4, textTransform: 'uppercase',
+                                        }}>Delete</Text>
+                                    </Pressable>
+                                ) : (
+                                    <View style={{flexDirection: 'row', alignItems: 'center', gap: 10, flexShrink: 0}}>
+                                        <Pressable onPress={() => setFocusedSeq(si)} hitSlop={8}>
+                                            <Icon name="edit" size={16} color={colors.inkSoft}/>
+                                        </Pressable>
+                                        <Pressable onPress={() => toggleSeqCollapse(seq.id)} hitSlop={8}>
+                                            <Icon
+                                                name={collapsedSeqs.has(seq.id) ? 'chevR' : 'chevDown'}
+                                                size={16}
+                                                color={colors.inkSoft}
+                                            />
+                                        </Pressable>
+                                    </View>
+                                )}
+                            </View>
                         </View>
 
-                        {/* Rows header */}
-                        <View style={{flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 8}}>
-                            <Text style={{fontFamily: fonts.mono, fontSize: 11, color: colors.inkMute, letterSpacing: 2, textTransform: 'uppercase'}}>
-                                Rows · {seq.rows.length} total
-                            </Text>
-                            <Text style={{fontFamily: fonts.mono, fontSize: 10, color: colors.inkMute, letterSpacing: 0.5}}>
-                                tap a row to focus
-                            </Text>
-                        </View>
-
-                        {/* Row cards */}
-                        <View style={{gap: 8}}>
+                        {/* Row cards + Add row — indented with left-border accent */}
+                        {(!collapsedSeqs.has(seq.id) || isEditing) && (
+                        <View style={{gap: 8, paddingLeft: 10, borderLeftWidth: 2, borderLeftColor: colors.cream2, marginLeft: 6}}>
                             {seq.rows.map((row, ri) => {
                                 const isActive = activeRow?.partIdx === activePart && activeRow?.seqIdx === si && activeRow?.rowIdx === ri
                                 const totalSts = row.stitches.reduce((sum, s) => sum + s.count, 0)
@@ -1086,7 +1322,7 @@ function Step3({draft, onChange}: { draft: Draft; onChange: (d: Draft) => void }
                                 return (
                                     <Pressable
                                         key={row.id}
-                                        onPress={() => { setActiveRow({partIdx: activePart, seqIdx: si, rowIdx: ri}); setShowFullPicker(false) }}
+                                        onPress={() => { setActiveRow({partIdx: activePart, seqIdx: si, rowIdx: ri}); setShowStitchPicker(false) }}
                                         style={{
                                             backgroundColor: colors.card,
                                             borderWidth: isActive ? 2 : 1,
@@ -1096,7 +1332,7 @@ function Step3({draft, onChange}: { draft: Draft; onChange: (d: Draft) => void }
                                         }}
                                     >
                                         {/* Row header row */}
-                                        <View style={{flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: empty ? 0 : 8, gap: 8}}>
+                                        <View style={{flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: empty ? 0 : 10, gap: 8}}>
                                             <View style={{flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1}}>
                                                 <Icon name="grip" size={14} color={colors.inkMute}/>
                                                 <Text style={{fontFamily: fonts.bodySb, fontSize: 13, color: isActive ? colors.brick : colors.ink}}>
@@ -1107,10 +1343,10 @@ function Step3({draft, onChange}: { draft: Draft; onChange: (d: Draft) => void }
                                                 </Text>
                                             </View>
                                             <View style={{flexDirection: 'row', alignItems: 'center', gap: 10, flexShrink: 0}}>
-                                                <Pressable onPress={() => clearRow(si, ri)}>
-                                                    <Icon name="refresh" size={14} color={colors.inkMute}/>
+                                                <Pressable onPress={() => removeLastStitch(si, ri)} hitSlop={8}>
+                                                    <Icon name="backspace" size={14} color={colors.inkMute}/>
                                                 </Pressable>
-                                                <Pressable onPress={() => removeRow(si, ri)}>
+                                                <Pressable onPress={() => confirmRemoveRow(si, ri)} hitSlop={8}>
                                                     <Icon name="trash" size={14} color={colors.inkMute}/>
                                                 </Pressable>
                                             </View>
@@ -1121,14 +1357,22 @@ function Step3({draft, onChange}: { draft: Draft; onChange: (d: Draft) => void }
                                                 {row.stitches.flatMap((si_item, idx) => {
                                                     const def = STITCH_MAP[si_item.stitchId]
                                                     if (!def) return []
+                                                    const chipColor = STITCH_BRICK.has(si_item.stitchId) ? colors.brick
+                                                                    : STITCH_MUSTARD.has(si_item.stitchId) ? colors.mustard
+                                                                    : colors.forest
                                                     return Array.from({length: si_item.count}, (_, i) => (
                                                         <View key={`${idx}-${i}`} style={{
-                                                            width: 22, height: 26, borderRadius: 6,
+                                                            width: 26, height: 36, borderRadius: 6,
                                                             backgroundColor: colors.cream2,
-                                                            borderWidth: 1.2, borderColor: def.color,
+                                                            borderWidth: 1.2, borderColor: chipColor,
                                                             alignItems: 'center', justifyContent: 'center',
+                                                            gap: 1, paddingVertical: 2,
                                                         }}>
-                                                            <StitchGlyph symbol={def.symbol} size={12} color={def.color}/>
+                                                            <StitchGlyph symbol={def.symbol} size={13} color={chipColor} strokeWidth={1.8}/>
+                                                            <Text style={{
+                                                                fontFamily: fonts.mono, fontSize: 7.5, color: chipColor,
+                                                                fontWeight: '700', letterSpacing: -0.3, lineHeight: 9,
+                                                            }}>{def.abbr}</Text>
                                                         </View>
                                                     ))
                                                 })}
@@ -1141,65 +1385,73 @@ function Step3({draft, onChange}: { draft: Draft; onChange: (d: Draft) => void }
                                     </Pressable>
                                 )
                             })}
-                        </View>
 
-                        {/* Add row — split ReuseChooser */}
-                        <View style={{flexDirection: 'row', gap: 8, marginTop: 8}}>
-                            <Pressable
-                                onPress={() => addRow(si)}
-                                style={{flex: 1.1, borderWidth: 1.5, borderStyle: 'dashed', borderColor: colors.brick, borderRadius: 14, paddingVertical: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6}}
-                            >
-                                <Icon name="plus" size={14} color={colors.brick}/>
-                                <Text style={{fontFamily: fonts.bodySb, fontSize: 13, color: colors.brick}}>New row</Text>
-                            </Pressable>
-                            <Pressable style={{flex: 1, borderWidth: 1, borderColor: colors.rule, backgroundColor: colors.card, borderRadius: 14, paddingVertical: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6}}>
-                                <Icon name="library" size={14} color={colors.mustardDk}/>
-                                <Text style={{fontFamily: fonts.bodySb, fontSize: 13, color: colors.ink}}>From library</Text>
-                                <View style={{backgroundColor: colors.cream2, borderRadius: 6, paddingHorizontal: 6, paddingVertical: 1}}>
-                                    <Text style={{fontFamily: fonts.mono, fontSize: 10, color: colors.inkMute, fontWeight: '700', letterSpacing: 0.5}}>28</Text>
-                                </View>
-                            </Pressable>
-                        </View>
-
-                        {/* Tip */}
-                        <View style={{marginTop: 14, paddingVertical: 10, paddingHorizontal: 12, backgroundColor: colors.cream2, borderRadius: 12, flexDirection: 'row', gap: 8, alignItems: 'flex-start'}}>
-                            <Icon name="bulb" size={14} color={colors.mustardDk}/>
-                            <Text style={{fontFamily: fonts.body, fontSize: 12, color: colors.inkSoft, flex: 1, lineHeight: 18}}>
-                                <Text style={{fontWeight: '700', color: colors.ink}}>Tip: </Text>
-                                Long-press a row to duplicate it — copy-paste your way through a pattern.
-                            </Text>
-                        </View>
-                    </View>
-                ))}
-
-                <Pressable onPress={addSeq} style={[styles.addPartBtn, {borderColor: colors.brick, borderRadius: radius.md}]}>
-                    <Icon name="plus" size={14} color={colors.brick}/>
-                    <Text style={{fontFamily: fonts.bodySb, fontSize: 13, color: colors.brick}}>Add sequence</Text>
-                </Pressable>
-
-                {/* Full stitch picker (via "All N stitches →") */}
-                {showFullPicker && activeRow && (
-                    <View style={[styles.stitchPickerPanel, {backgroundColor: colors.card, borderColor: colors.rule, borderRadius: radius.lg, marginTop: spacing[3]}]}>
-                        <View style={styles.pickerHeader}>
-                            <Text style={{fontFamily: fonts.bodySb, fontSize: fontSize.base, color: colors.ink}}>Pick a stitch</Text>
-                            <Pressable onPress={() => setShowFullPicker(false)}>
-                                <Icon name="x" size={18} color={colors.inkMute}/>
-                            </Pressable>
-                        </View>
-                        <View style={styles.stitchGrid}>
-                            {STITCHES.filter(s => s.type === draft.craft).map(s => (
+                            {/* Add row — split ReuseChooser, inside the bordered container */}
+                            <View style={{flexDirection: 'row', gap: 8, marginTop: 2}}>
                                 <Pressable
-                                    key={s.id}
-                                    onPress={() => addStitchToRow(activeRow.partIdx, activeRow.seqIdx, activeRow.rowIdx, s.id)}
-                                    style={[styles.stitchPickerChip, {backgroundColor: s.color, borderRadius: 10}]}
+                                    onPress={() => addRow(si)}
+                                    style={{flex: 1.1, borderWidth: 1.5, borderStyle: 'dashed', borderColor: colors.brick, borderRadius: 14, paddingVertical: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6}}
                                 >
-                                    <StitchGlyph symbol={s.symbol} size={20} color="#2B1810"/>
-                                    <Text style={{fontFamily: fonts.mono, fontSize: 9, color: '#2B1810', fontWeight: '700'}}>{s.abbr}</Text>
+                                    <Icon name="plus" size={14} color={colors.brick}/>
+                                    <Text style={{fontFamily: fonts.bodySb, fontSize: 13, color: colors.brick}}>New row</Text>
                                 </Pressable>
-                            ))}
+                                <Pressable
+                                    onPress={() => { setRowPickerSeqIdx(si); setShowRowPicker(true) }}
+                                    style={{flex: 1, borderWidth: 1, borderColor: colors.rule, backgroundColor: colors.card, borderRadius: 14, paddingVertical: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6}}
+                                >
+                                    <Icon name="library" size={14} color={colors.mustardDk}/>
+                                    <Text style={{fontFamily: fonts.bodySb, fontSize: 13, color: colors.ink}}>Row from lib</Text>
+                                    <View style={{backgroundColor: colors.cream2, borderRadius: 6, paddingHorizontal: 6, paddingVertical: 1}}>
+                                        <Text style={{fontFamily: fonts.mono, fontSize: 10, color: colors.inkMute, fontWeight: '700', letterSpacing: 0.5}}>{libraryRows.length}</Text>
+                                    </View>
+                                </Pressable>
+                            </View>
                         </View>
+                        )}
                     </View>
-                )}
+                    )
+                })}
+                </View>
+
+                {/* Add sequence — ReuseChooser */}
+                <View style={{flexDirection: 'row', gap: 8, marginTop: 16}}>
+                    <Pressable
+                        onPress={addSeq}
+                        style={{
+                            flex: 1.1, borderWidth: 1.5, borderStyle: 'dashed',
+                            borderColor: colors.brick, borderRadius: 14,
+                            paddingVertical: 12, flexDirection: 'row',
+                            alignItems: 'center', justifyContent: 'center', gap: 6,
+                        }}
+                    >
+                        <Icon name="plus" size={14} color={colors.brick}/>
+                        <Text style={{fontFamily: fonts.bodySb, fontSize: 13, color: colors.brick}}>New sequence</Text>
+                    </Pressable>
+                    <Pressable
+                        onPress={() => setShowSeqPicker(true)}
+                        style={{
+                            flex: 1, borderWidth: 1, borderColor: colors.rule,
+                            backgroundColor: colors.card, borderRadius: 14,
+                            paddingVertical: 12, flexDirection: 'row',
+                            alignItems: 'center', justifyContent: 'center', gap: 6,
+                        }}
+                    >
+                        <Icon name="library" size={14} color={colors.mustardDk}/>
+                        <Text style={{fontFamily: fonts.bodySb, fontSize: 13, color: colors.ink}}>Seq. from lib</Text>
+                        <View style={{backgroundColor: colors.cream2, borderRadius: 6, paddingHorizontal: 6, paddingVertical: 1}}>
+                            <Text style={{fontFamily: fonts.mono, fontSize: 10, color: colors.inkMute, fontWeight: '700', letterSpacing: 0.5}}>{librarySequences.length + libraryPatterns.length}</Text>
+                        </View>
+                    </Pressable>
+                </View>
+
+                {/* Tip — one per screen, below add-sequence */}
+                <View style={{marginTop: 14, paddingVertical: 10, paddingHorizontal: 12, backgroundColor: colors.cream2, borderRadius: 12, flexDirection: 'row', gap: 8, alignItems: 'flex-start'}}>
+                    <Icon name="bulb" size={14} color={colors.mustardDk}/>
+                    <Text style={{fontFamily: fonts.body, fontSize: 12, color: colors.inkSoft, flex: 1, lineHeight: 18}}>
+                        <Text style={{fontWeight: '700', color: colors.ink}}>Tip: </Text>
+                        Tap any row to focus it — the stitch dock fills that row.
+                    </Text>
+                </View>
             </ScrollView>
 
             {/* Stitch dock — pinned above wizard footer */}
@@ -1210,10 +1462,10 @@ function Step3({draft, onChange}: { draft: Draft; onChange: (d: Draft) => void }
                     paddingTop: 10, paddingBottom: 10, paddingHorizontal: 20,
                 }}>
                     <View style={{flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8}}>
-                        <Text style={{fontFamily: fonts.mono, fontSize: 10, color: colors.brick, fontWeight: '700', letterSpacing: 2, textTransform: 'uppercase'}}>
-                            Tap to add to Row {activeRow!.rowIdx + 1} ✱
+                        <Text style={{fontFamily: fonts.mono, fontSize: 10, color: colors.brick, fontWeight: '700', letterSpacing: 1.4, textTransform: 'uppercase'}}>
+                            Tap to add to {draft.parts[activeRow!.partIdx]?.sequences[activeRow!.seqIdx]?.name ?? ''} · Row {activeRow!.rowIdx + 1} ✱
                         </Text>
-                        <Pressable onPress={() => setShowFullPicker(true)} style={{flexDirection: 'row', alignItems: 'center', gap: 4}}>
+                        <Pressable onPress={() => setShowStitchPicker(true)} style={{flexDirection: 'row', alignItems: 'center', gap: 4}}>
                             <Text style={{fontFamily: fonts.mono, fontSize: 11, color: colors.brick, fontWeight: '700'}}>
                                 All {totalStitchCount} stitches
                             </Text>
@@ -1221,21 +1473,464 @@ function Step3({draft, onChange}: { draft: Draft; onChange: (d: Draft) => void }
                         </Pressable>
                     </View>
                     <View style={{flexDirection: 'row', gap: 6}}>
-                        {quickStitches.map(s => (
-                            <Pressable
-                                key={s.id}
-                                onPress={() => addStitchToRow(activeRow!.partIdx, activeRow!.seqIdx, activeRow!.rowIdx, s.id)}
-                                style={{flex: 1, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.rule, borderRadius: 10, paddingVertical: 6, alignItems: 'center', gap: 3}}
-                            >
-                                <View style={{width: 28, height: 28, borderRadius: 8, backgroundColor: s.color, alignItems: 'center', justifyContent: 'center'}}>
-                                    <StitchGlyph symbol={s.symbol} size={16} color="#2B1810"/>
-                                </View>
-                                <Text style={{fontSize: 9.5, fontFamily: fonts.mono, color: colors.inkSoft, fontWeight: '700'}}>{s.abbr}</Text>
-                            </Pressable>
-                        ))}
+                        {dockStitches.map((s, idx) => {
+                            const tileColor = [colors.brick, colors.mustard, colors.forest][idx % 3]!
+                            return (
+                                <Pressable
+                                    key={s.id}
+                                    onPress={() => addStitchToRow(activeRow!.partIdx, activeRow!.seqIdx, activeRow!.rowIdx, s.id)}
+                                    style={{flex: 1, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.rule, borderRadius: 10, paddingVertical: 6, alignItems: 'center', gap: 3}}
+                                >
+                                    <View style={{width: 28, height: 28, borderRadius: 8, backgroundColor: tileColor, alignItems: 'center', justifyContent: 'center'}}>
+                                        <StitchGlyph symbol={s.symbol} size={16} color="#FBF6EC"/>
+                                    </View>
+                                    <Text style={{fontSize: 9.5, fontFamily: fonts.mono, color: colors.inkSoft, fontWeight: '700'}}>{s.abbr}</Text>
+                                </Pressable>
+                            )
+                        })}
                     </View>
                 </View>
             )}
+
+            {/* Full stitch picker modal */}
+            <StitchPickerModal
+                visible={showStitchPicker}
+                onClose={() => setShowStitchPicker(false)}
+                onSelect={handlePickerSelect}
+                onDefineCustom={() => { setShowStitchPicker(false); setShowDefineCustom(true) }}
+                craftFilter={draft.craft}
+            />
+
+            {/* Define custom stitch screen */}
+            <DefineCustomStitchScreen
+                visible={showDefineCustom}
+                onClose={() => setShowDefineCustom(false)}
+                onSaved={(_id) => {
+                    setShowDefineCustom(false)
+                    setShowStitchPicker(true)
+                }}
+                defaultCraft={draft.craft}
+            />
+
+            {/* Row library picker */}
+            <RowPickerModal
+                visible={showRowPicker}
+                onClose={() => setShowRowPicker(false)}
+                onSelect={(row) => {
+                    if (rowPickerSeqIdx !== null) addRowFromLib(rowPickerSeqIdx, row)
+                }}
+                onBuildNew={() => {
+                    setShowRowPicker(false)
+                    if (rowPickerSeqIdx !== null) addRow(rowPickerSeqIdx)
+                }}
+                craftFilter={draft.craft}
+            />
+
+            {/* Sequence / Pattern library picker */}
+            <SeqPickerModal
+                visible={showSeqPicker}
+                onClose={() => setShowSeqPicker(false)}
+                onSelectSequence={addSeqFromLib}
+                onSelectPattern={addPatternFromLib}
+                onBuildNew={() => { setShowSeqPicker(false); addSeq() }}
+                craftFilter={draft.craft}
+            />
+
+            {/* Remove-row confirm dialog */}
+            {confirmDialog && (() => {
+                const diagSeq = part?.sequences[confirmDialog.seqIdx]
+                const diagRow = diagSeq?.rows[confirmDialog.rowIdx]
+                const totalSts = diagRow?.stitches.reduce((s, inst) => s + inst.count, 0) ?? 0
+                // Expand StitchInstances into individual chips, capped so they don't overflow
+                const MAX_CHIPS = 14
+                const chips: {stitchId: string}[] = []
+                for (const inst of diagRow?.stitches ?? []) {
+                    for (let i = 0; i < inst.count && chips.length < MAX_CHIPS; i++) {
+                        chips.push({stitchId: inst.stitchId})
+                    }
+                }
+                const overflow = totalSts > MAX_CHIPS ? totalSts - MAX_CHIPS : 0
+                return (
+                    <Modal visible transparent animationType="fade" onRequestClose={() => setConfirmDialog(null)}>
+                        <View style={{flex: 1, alignItems: 'center', justifyContent: 'center'}}>
+                            {/* Scrim */}
+                            <BlurView
+                                intensity={14}
+                                tint="dark"
+                                style={[StyleSheet.absoluteFillObject, {backgroundColor: 'rgba(43,24,16,0.42)'}]}
+                            />
+                            <Pressable style={StyleSheet.absoluteFillObject} onPress={() => setConfirmDialog(null)}/>
+                            {/* Dialog card */}
+                            <View style={{
+                                width: 320, maxWidth: '92%',
+                                backgroundColor: colors.bg,
+                                borderRadius: 22,
+                                borderWidth: 1, borderColor: colors.rule,
+                                overflow: 'hidden',
+                                shadowColor: 'rgba(43,24,16,1)',
+                                shadowOffset: {width: 0, height: 30},
+                                shadowOpacity: 0.35,
+                                shadowRadius: 60,
+                                elevation: 20,
+                                marginTop: -48, // slight upward bias for thumb reach
+                            }}>
+                                {/* Icon header — warm tint band */}
+                                <View style={{
+                                    paddingTop: 22, paddingHorizontal: 22, paddingBottom: 14,
+                                    backgroundColor: '#FBEFEA',
+                                    borderBottomWidth: 1,
+                                    borderBottomColor: 'rgba(156,61,46,0.15)',
+                                    alignItems: 'center', gap: 12,
+                                }}>
+                                    <View style={{
+                                        width: 56, height: 56, borderRadius: 16,
+                                        backgroundColor: colors.brick,
+                                        alignItems: 'center', justifyContent: 'center',
+                                        shadowColor: colors.brick,
+                                        shadowOffset: {width: 0, height: 10},
+                                        shadowOpacity: 0.45,
+                                        shadowRadius: 14,
+                                        elevation: 8,
+                                        transform: [{rotate: '-4deg'}],
+                                    }}>
+                                        <Icon name="trash" size={26} color="#FBF6EC"/>
+                                    </View>
+                                    <View style={{alignItems: 'center', gap: 6}}>
+                                        <Text style={{
+                                            fontFamily: fonts.display, fontSize: 24, color: colors.brick,
+                                            letterSpacing: -0.25, lineHeight: 26, textAlign: 'center',
+                                        }}>
+                                            Remove this row?
+                                        </Text>
+                                        <Text style={{
+                                            fontFamily: fonts.mono, fontSize: 10.5, color: colors.inkMute,
+                                            letterSpacing: 2, textTransform: 'uppercase',
+                                        }}>
+                                            No undo · {totalSts} stitch{totalSts !== 1 ? 'es' : ''} lost
+                                        </Text>
+                                    </View>
+                                </View>
+
+                                {/* Row preview */}
+                                <View style={{paddingTop: 14, paddingHorizontal: 20, paddingBottom: 4}}>
+                                    <View style={{
+                                        backgroundColor: colors.card,
+                                        borderWidth: 1, borderColor: colors.rule,
+                                        borderRadius: 12,
+                                        paddingVertical: 10, paddingHorizontal: 12,
+                                    }}>
+                                        {/* Row meta */}
+                                        <View style={{flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8}}>
+                                            <Text style={{fontFamily: fonts.bodySb, fontSize: 13, color: colors.ink}}>
+                                                {diagRow?.label}
+                                            </Text>
+                                            <Text style={{fontFamily: fonts.mono, fontSize: 10.5, color: colors.inkMute}}>
+                                                · {totalSts} sts
+                                            </Text>
+                                            <View style={{flex: 1}}/>
+                                            <Text style={{fontFamily: fonts.mono, fontSize: 10, color: colors.inkMute, letterSpacing: 0.6}}>
+                                                {diagSeq?.name}
+                                            </Text>
+                                        </View>
+                                        {/* Stitch chips preview */}
+                                        <View style={{flexDirection: 'row', flexWrap: 'wrap', gap: 3}}>
+                                            {chips.map((chip, i) => {
+                                                const def = STITCH_MAP[chip.stitchId]
+                                                if (!def) return null
+                                                const c = STITCH_BRICK.has(chip.stitchId) ? colors.brick
+                                                        : STITCH_MUSTARD.has(chip.stitchId) ? colors.mustard
+                                                        : colors.forest
+                                                return (
+                                                    <View key={i} style={{
+                                                        width: 22, height: 26, borderRadius: 6,
+                                                        backgroundColor: colors.cream2,
+                                                        borderWidth: 1.2, borderColor: c,
+                                                        alignItems: 'center', justifyContent: 'center',
+                                                        opacity: 0.7,
+                                                    }}>
+                                                        <StitchGlyph symbol={def.symbol} size={12} color={c} strokeWidth={1.8}/>
+                                                    </View>
+                                                )
+                                            })}
+                                            {overflow > 0 && (
+                                                <View style={{
+                                                    height: 26, borderRadius: 6,
+                                                    backgroundColor: colors.cream2,
+                                                    borderWidth: 1, borderColor: colors.rule,
+                                                    alignItems: 'center', justifyContent: 'center',
+                                                    paddingHorizontal: 6, opacity: 0.7,
+                                                }}>
+                                                    <Text style={{fontFamily: fonts.mono, fontSize: 9, color: colors.inkMute, fontWeight: '700'}}>
+                                                        +{overflow}
+                                                    </Text>
+                                                </View>
+                                            )}
+                                        </View>
+                                    </View>
+                                    <Text style={{
+                                        marginTop: 10, fontSize: 13, color: colors.inkSoft,
+                                        fontFamily: fonts.body, lineHeight: 19,
+                                        textAlign: 'center', paddingHorizontal: 4,
+                                    }}>
+                                        The rows above and below will shift up — neighboring rows aren't affected.
+                                    </Text>
+                                </View>
+
+                                {/* Buttons */}
+                                <View style={{padding: 20, paddingTop: 16, gap: 8}}>
+                                    <Pressable
+                                        onPress={executeRemoveRow}
+                                        style={{
+                                            height: 48, borderRadius: 14,
+                                            backgroundColor: colors.brick,
+                                            flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+                                            shadowColor: colors.brick,
+                                            shadowOffset: {width: 0, height: 8},
+                                            shadowOpacity: 0.35,
+                                            shadowRadius: 14,
+                                            elevation: 6,
+                                        }}
+                                    >
+                                        <Icon name="trash" size={16} color="#FBF6EC"/>
+                                        <Text style={{fontFamily: fonts.bodySb, fontSize: 15, color: '#FBF6EC', letterSpacing: -0.1}}>
+                                            Yes, remove row
+                                        </Text>
+                                    </Pressable>
+                                    <Pressable
+                                        onPress={() => setConfirmDialog(null)}
+                                        style={{
+                                            height: 44, borderRadius: 12,
+                                            borderWidth: 1.5, borderColor: colors.rule,
+                                            alignItems: 'center', justifyContent: 'center',
+                                        }}
+                                    >
+                                        <Text style={{fontFamily: fonts.bodySb, fontSize: 14.5, color: colors.ink, letterSpacing: -0.1}}>
+                                            Keep it
+                                        </Text>
+                                    </Pressable>
+                                </View>
+                            </View>
+                        </View>
+                    </Modal>
+                )
+            })()}
+
+            {/* Remove-sequence confirm dialog */}
+            {confirmSeqDialog && (() => {
+                const diagSeq = part?.sequences[confirmSeqDialog.seqIdx]
+                const rowCount = diagSeq?.rows.length ?? 0
+                const totalSts = diagSeq?.rows.reduce(
+                    (sum, r) => sum + r.stitches.reduce((s2, st) => s2 + st.count, 0), 0,
+                ) ?? 0
+                const seqColor = [colors.mustard, colors.brick, colors.forest][confirmSeqDialog.seqIdx % 3]!
+                const MAX_CHIPS_PER_ROW = 24
+                return (
+                    <Modal visible transparent animationType="fade" onRequestClose={() => setConfirmSeqDialog(null)}>
+                        <View style={{flex: 1, alignItems: 'center', justifyContent: 'center'}}>
+                            {/* Scrim */}
+                            <BlurView
+                                intensity={14}
+                                tint="dark"
+                                style={[StyleSheet.absoluteFillObject, {backgroundColor: 'rgba(43,24,16,0.42)'}]}
+                            />
+                            <Pressable style={StyleSheet.absoluteFillObject} onPress={() => setConfirmSeqDialog(null)}/>
+                            {/* Dialog card */}
+                            <View style={{
+                                width: 320, maxWidth: '92%',
+                                backgroundColor: colors.bg,
+                                borderRadius: 22,
+                                borderWidth: 1, borderColor: colors.rule,
+                                overflow: 'hidden',
+                                shadowColor: 'rgba(43,24,16,1)',
+                                shadowOffset: {width: 0, height: 30},
+                                shadowOpacity: 0.35,
+                                shadowRadius: 60,
+                                elevation: 20,
+                                marginTop: -48,
+                            }}>
+                                {/* Icon header */}
+                                <View style={{
+                                    paddingTop: 22, paddingHorizontal: 22, paddingBottom: 14,
+                                    backgroundColor: '#FBEFEA',
+                                    borderBottomWidth: 1,
+                                    borderBottomColor: 'rgba(156,61,46,0.15)',
+                                    alignItems: 'center', gap: 12,
+                                }}>
+                                    <View style={{
+                                        width: 56, height: 56, borderRadius: 16,
+                                        backgroundColor: colors.brick,
+                                        alignItems: 'center', justifyContent: 'center',
+                                        shadowColor: colors.brick,
+                                        shadowOffset: {width: 0, height: 10},
+                                        shadowOpacity: 0.45,
+                                        shadowRadius: 14,
+                                        elevation: 8,
+                                        transform: [{rotate: '-4deg'}],
+                                    }}>
+                                        <Icon name="trash" size={26} color="#FBF6EC"/>
+                                    </View>
+                                    <View style={{alignItems: 'center', gap: 6}}>
+                                        <Text style={{
+                                            fontFamily: fonts.display, fontSize: 24, color: colors.brick,
+                                            letterSpacing: -0.25, lineHeight: 26, textAlign: 'center',
+                                        }}>
+                                            Delete this whole sequence?
+                                        </Text>
+                                        <Text style={{
+                                            fontFamily: fonts.mono, fontSize: 10.5, color: colors.inkMute,
+                                            letterSpacing: 2, textTransform: 'uppercase',
+                                        }}>
+                                            No undo · {rowCount} row{rowCount !== 1 ? 's' : ''} · {totalSts} stitch{totalSts !== 1 ? 'es' : ''} lost
+                                        </Text>
+                                    </View>
+                                </View>
+
+                                {/* Sequence preview */}
+                                <View style={{paddingTop: 14, paddingHorizontal: 20, paddingBottom: 4}}>
+                                    <View style={{
+                                        backgroundColor: colors.card,
+                                        borderWidth: 1, borderColor: colors.rule,
+                                        borderRadius: 12,
+                                        paddingVertical: 10, paddingHorizontal: 12,
+                                    }}>
+                                        {/* Sequence meta */}
+                                        <View style={{flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10}}>
+                                            <View style={{
+                                                width: 24, height: 24, borderRadius: 7,
+                                                backgroundColor: seqColor,
+                                                alignItems: 'center', justifyContent: 'center',
+                                                flexShrink: 0,
+                                            }}>
+                                                <Text style={{fontFamily: fonts.display, fontSize: 13, color: '#FBF6EC'}}>
+                                                    {confirmSeqDialog.seqIdx + 1}
+                                                </Text>
+                                            </View>
+                                            <Text
+                                                numberOfLines={1}
+                                                style={{
+                                                    flex: 1, fontFamily: fonts.bodySb, fontSize: 13.5, color: colors.ink,
+                                                }}
+                                            >
+                                                {diagSeq?.name}
+                                            </Text>
+                                            <Text style={{fontFamily: fonts.mono, fontSize: 10, color: colors.inkMute, flexShrink: 0}}>
+                                                {rowCount} row{rowCount !== 1 ? 's' : ''}
+                                            </Text>
+                                        </View>
+                                        {/* Per-row mini preview */}
+                                        <View style={{gap: 5}}>
+                                            {diagSeq?.rows.map((row) => {
+                                                const chips: {stitchId: string}[] = []
+                                                for (const inst of row.stitches) {
+                                                    for (let i = 0; i < inst.count && chips.length < MAX_CHIPS_PER_ROW; i++) {
+                                                        chips.push({stitchId: inst.stitchId})
+                                                    }
+                                                }
+                                                const rowTotal = row.stitches.reduce((s, inst) => s + inst.count, 0)
+                                                const overflow = rowTotal > MAX_CHIPS_PER_ROW ? rowTotal - MAX_CHIPS_PER_ROW : 0
+                                                const shortLabel = row.label.replace(/^Row\s+/i, 'R')
+                                                return (
+                                                    <View key={row.id} style={{flexDirection: 'row', alignItems: 'center', gap: 7}}>
+                                                        <Text style={{
+                                                            fontFamily: fonts.mono, fontSize: 9, color: colors.inkMute,
+                                                            fontWeight: '700', width: 30, flexShrink: 0,
+                                                        }}>
+                                                            {shortLabel}
+                                                        </Text>
+                                                        {row.stitches.length === 0 ? (
+                                                            <Text style={{
+                                                                fontFamily: fonts.mono, fontSize: 9.5,
+                                                                color: colors.inkMute, fontStyle: 'italic',
+                                                            }}>empty</Text>
+                                                        ) : (
+                                                            <View style={{flexDirection: 'row', flexWrap: 'wrap', gap: 2, flex: 1}}>
+                                                                {chips.map((chip, i) => {
+                                                                    const def = STITCH_MAP[chip.stitchId]
+                                                                    if (!def) return null
+                                                                    const c = STITCH_BRICK.has(chip.stitchId) ? colors.brick
+                                                                            : STITCH_MUSTARD.has(chip.stitchId) ? colors.mustard
+                                                                            : colors.forest
+                                                                    return (
+                                                                        <View key={i} style={{
+                                                                            width: 14, height: 17, borderRadius: 4,
+                                                                            backgroundColor: colors.cream2,
+                                                                            borderWidth: 1, borderColor: c,
+                                                                            alignItems: 'center', justifyContent: 'center',
+                                                                            opacity: 0.7,
+                                                                        }}>
+                                                                            <StitchGlyph symbol={def.symbol} size={8} color={c} strokeWidth={1.6}/>
+                                                                        </View>
+                                                                    )
+                                                                })}
+                                                                {overflow > 0 && (
+                                                                    <View style={{
+                                                                        height: 17, borderRadius: 4,
+                                                                        backgroundColor: colors.cream2,
+                                                                        borderWidth: 1, borderColor: colors.rule,
+                                                                        alignItems: 'center', justifyContent: 'center',
+                                                                        paddingHorizontal: 4, opacity: 0.7,
+                                                                    }}>
+                                                                        <Text style={{
+                                                                            fontFamily: fonts.mono, fontSize: 8,
+                                                                            color: colors.inkMute, fontWeight: '700',
+                                                                        }}>+{overflow}</Text>
+                                                                    </View>
+                                                                )}
+                                                            </View>
+                                                        )}
+                                                    </View>
+                                                )
+                                            })}
+                                        </View>
+                                    </View>
+                                    <Text style={{
+                                        marginTop: 10, fontSize: 13, color: colors.inkSoft,
+                                        fontFamily: fonts.body, lineHeight: 19,
+                                        textAlign: 'center', paddingHorizontal: 4,
+                                    }}>
+                                        Every row inside moves with it. Other sequences in this part shift up — they aren't affected.
+                                    </Text>
+                                </View>
+
+                                {/* Buttons */}
+                                <View style={{padding: 20, paddingTop: 16, gap: 8}}>
+                                    <Pressable
+                                        onPress={executeRemoveSeq}
+                                        style={{
+                                            height: 48, borderRadius: 14,
+                                            backgroundColor: colors.brick,
+                                            flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+                                            shadowColor: colors.brick,
+                                            shadowOffset: {width: 0, height: 8},
+                                            shadowOpacity: 0.35,
+                                            shadowRadius: 14,
+                                            elevation: 6,
+                                        }}
+                                    >
+                                        <Icon name="trash" size={16} color="#FBF6EC"/>
+                                        <Text style={{fontFamily: fonts.bodySb, fontSize: 15, color: '#FBF6EC', letterSpacing: -0.1}}>
+                                            Yes, delete sequence
+                                        </Text>
+                                    </Pressable>
+                                    <Pressable
+                                        onPress={() => setConfirmSeqDialog(null)}
+                                        style={{
+                                            height: 44, borderRadius: 12,
+                                            borderWidth: 1.5, borderColor: colors.rule,
+                                            alignItems: 'center', justifyContent: 'center',
+                                        }}
+                                    >
+                                        <Text style={{fontFamily: fonts.bodySb, fontSize: 14.5, color: colors.ink, letterSpacing: -0.1}}>
+                                            Keep it
+                                        </Text>
+                                    </Pressable>
+                                </View>
+                            </View>
+                        </View>
+                    </Modal>
+                )
+            })()}
+
         </View>
     )
 }
@@ -1410,7 +2105,7 @@ export default function SetupWizard() {
             title: 'Break it into parts.',
             sub: 'A cardigan has a body and two sleeves. A scarf has one part. You decide.'
         },
-        {label: 'Step 3 of 4', title: 'Build a sequence.', sub: 'Name it, add rows, tap stitches below to fill the active row.'},
+        {label: 'Step 3 of 4', title: 'Plan every sequence.', sub: "Pick a part, then fill each sequence's rows. Scroll through them all."},
         {label: 'Step 4 of 4', title: 'Arrange & repeat.', sub: 'Set how many times each sequence repeats.'},
     ]
 
@@ -1547,7 +2242,7 @@ export default function SetupWizard() {
                             </Pressable>
                         ) : (
                             <Btn variant="primary" size="lg" icon="chevR" full onPress={next}>
-                                {step === 3 ? 'Cast on!' : 'Next'}
+                                {step === 3 ? 'Cast on!' : step === 2 ? 'Next: Arrange' : 'Next'}
                             </Btn>
                         )}
                     </View>
@@ -1619,10 +2314,6 @@ const styles = StyleSheet.create({
     miniChip2: {alignItems: 'center', paddingHorizontal: 8, paddingVertical: 6},
     addStitchBtn: {width: 32, height: 32, alignItems: 'center', justifyContent: 'center', borderWidth: 1},
     addRowBtn: {flexDirection: 'row', alignItems: 'center', gap: 6, paddingTop: 12, marginTop: 4},
-    stitchPickerPanel: {borderWidth: 1, padding: 14},
-    pickerHeader: {flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12},
-    stitchGrid: {flexDirection: 'row', flexWrap: 'wrap', gap: 8},
-    stitchPickerChip: {alignItems: 'center', padding: 8, width: 52},
     arrangeCard: {borderWidth: 1, padding: 16, marginBottom: 8},
     repeatRow: {flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10},
     stepper: {flexDirection: 'row', alignItems: 'center', gap: 8},

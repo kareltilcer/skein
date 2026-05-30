@@ -53,3 +53,39 @@ export const STITCH_GROUPS: Record<string, string[]> = {
   decreases: ['k2tog', 'ssk', 'k3tog', 'p2tog', 'sc2tog', 'dc2tog'],
   cables:    ['c4f', 'c4b'],
 }
+
+export type PickerGroup = { id: string; label: string; ids: string[] }
+
+export const STITCH_PICKER_GROUPS: PickerGroup[] = [
+  { id: 'basics_k',  label: 'Knit · Basics',           ids: ['k', 'p', 'sl', 'tbl', 'ns'] },
+  { id: 'inc_k',     label: 'Knit · Increases',         ids: ['yo', 'kfb', 'm1'] },
+  { id: 'dec_k',     label: 'Knit · Decreases',         ids: ['k2tog', 'ssk', 'k3tog', 'p2tog'] },
+  { id: 'cab_k',     label: 'Knit · Cables & Texture',  ids: ['c4f', 'c4b', 'mb'] },
+  { id: 'basics_c',  label: 'Crochet · Basics',         ids: ['ch', 'slst', 'sc', 'hdc', 'dc', 'tr', 'dtr', 'mr'] },
+  { id: 'dec_c',     label: 'Crochet · Decreases',      ids: ['sc2tog', 'dc2tog'] },
+  { id: 'special_c', label: 'Crochet · Special',        ids: ['pic', 'fpdc', 'bpdc', 'shell', 'vst'] },
+]
+
+export type PickerFilter = 'all' | 'knit' | 'crochet' | 'increases' | 'decreases' | 'cables' | 'custom'
+
+export const PICKER_FILTER_CHIPS: { id: PickerFilter; label: string }[] = [
+  { id: 'all',       label: 'All' },
+  { id: 'knit',      label: 'Knit' },
+  { id: 'crochet',   label: 'Crochet' },
+  { id: 'increases', label: 'Increases' },
+  { id: 'decreases', label: 'Decreases' },
+  { id: 'cables',    label: 'Cables' },
+  { id: 'custom',    label: 'Custom' },
+]
+
+export function getPickerGroups(filter: PickerFilter): PickerGroup[] {
+  switch (filter) {
+    case 'knit':      return STITCH_PICKER_GROUPS.filter(g => g.id.endsWith('_k'))
+    case 'crochet':   return STITCH_PICKER_GROUPS.filter(g => g.id.endsWith('_c'))
+    case 'increases': return STITCH_PICKER_GROUPS.filter(g => g.id.startsWith('inc_'))
+    case 'decreases': return STITCH_PICKER_GROUPS.filter(g => g.id.startsWith('dec_'))
+    case 'cables':    return STITCH_PICKER_GROUPS.filter(g => g.id === 'cab_k')
+    case 'custom':    return []
+    default:          return STITCH_PICKER_GROUPS
+  }
+}

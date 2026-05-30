@@ -89,3 +89,19 @@ export type Settings = {
   holdTimeMs: number
   hasSeenWelcome: boolean
 }
+
+export type TileColorKey = 'brick' | 'mustard' | 'forest' | 'brickDk' | 'mustardDk' | 'forestDk'
+export type CountsAs = 'inc' | 'one' | 'dec'
+
+export type CustomStitchDef = {
+  id: string
+  abbr: string
+  name: string
+  type: Craft
+  symbol: string
+  tileColorKey: TileColorKey
+  countsAs: CountsAs
+  notation?: string
+  group?: string
+  createdAt: string
+}

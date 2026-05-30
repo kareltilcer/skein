@@ -216,6 +216,31 @@ export const useLibraryStore = create<LibraryStore>()(
     {
       name: 'skein-library',
       storage: createJSONStorage(() => AsyncStorage),
+      /**
+       * Custom merge: zustand's default is `{...currentState, ...persistedState}` which
+       * lets a stale empty `rows: []` in AsyncStorage silently clobber the seed data.
+       * Here we diff each collection and prepend any built-in seed items that are absent
+       * from the stored snapshot, while keeping all user-created entries intact.
+       */
+      merge: (persistedState, currentState) => {
+        const stored = (persistedState ?? {}) as Partial<LibraryStore>
+
+        const storedRows = stored.rows ?? []
+        const storedSeqs = stored.sequences ?? []
+        const storedPats = stored.patterns ?? []
+
+        const storedRowIds = new Set(storedRows.map(r => r.id))
+        const storedSeqIds = new Set(storedSeqs.map(s => s.id))
+        const storedPatIds = new Set(storedPats.map(p => p.id))
+
+        return {
+          ...currentState,
+          ...stored,
+          rows:      [...SEED_ROWS.filter(r => !storedRowIds.has(r.id)), ...storedRows],
+          sequences: [...SEED_SEQUENCES.filter(s => !storedSeqIds.has(s.id)), ...storedSeqs],
+          patterns:  [...SEED_PATTERNS.filter(p => !storedPatIds.has(p.id)), ...storedPats],
+        }
+      },
     },
   ),
 )

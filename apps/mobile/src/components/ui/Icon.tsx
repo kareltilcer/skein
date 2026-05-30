@@ -6,7 +6,7 @@ type IconName =
   | 'home' | 'gear' | 'more' | 'back' | 'check' | 'moon' | 'sun' | 'bulb'
   | 'edit' | 'trash' | 'yarn' | 'needle' | 'loop' | 'refresh' | 'save'
   | 'user' | 'globe' | 'cloud' | 'play' | 'pause' | 'repeat' | 'grid'
-  | 'grip' | 'sparkle' | 'settings' | 'library'
+  | 'grip' | 'sparkle' | 'settings' | 'library' | 'backspace'
 
 type Props = {
   name: IconName
@@ -52,6 +52,7 @@ export default function Icon({ name, size = 22, color = 'currentColor', stroke =
     sparkle:  <Path d="M12 4 L13.5 10.5 L20 12 L13.5 13.5 L12 20 L10.5 13.5 L4 12 L10.5 10.5 Z" {...p}/>,
     settings: <><Circle cx="12" cy="12" r="3" {...p}/><Path d="M12 4 V6 M12 18 V20 M4 12 H6 M18 12 H20 M6 6 L7.5 7.5 M16.5 16.5 L18 18 M6 18 L7.5 16.5 M16.5 7.5 L18 6" {...p}/></>,
     library:  <><Line x1="6" y1="4" x2="6" y2="20" {...p}/><Line x1="10" y1="4" x2="10" y2="20" {...p}/><Path d="M14 4 L18 20" {...p}/></>,
+    backspace: <><Path d="M20 7 H9 L3 12 L9 17 H20 Z" {...p}/><Line x1="14" y1="10" x2="18" y2="14" {...p}/><Line x1="18" y1="10" x2="14" y2="14" {...p}/></>,
   }
 
   return (
