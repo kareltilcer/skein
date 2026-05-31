@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { View, Text, ScrollView, TextInput, Pressable, StyleSheet } from 'react-native'
 
 import { LinearGradient } from 'expo-linear-gradient'
+import { useTranslation } from 'react-i18next'
 import { useTheme } from '../theme/ThemeContext'
 import { useLibraryStore } from '../store/libraryStore'
 import { useSettingsStore } from '../store/settingsStore'
@@ -15,13 +16,8 @@ import type { Craft, LibrarySequence, LibraryPattern, LibraryRow } from '../type
 type Tab = 'pat' | 'seq' | 'row'
 type CraftFilter = Craft | 'all'
 
-const TABS: { id: Tab; label: string }[] = [
-  { id: 'pat', label: 'Patterns'  },
-  { id: 'seq', label: 'Sequences' },
-  { id: 'row', label: 'Rows'      },
-]
-
 function SequenceCard({ seq }: { seq: LibrarySequence }) {
+  const { t } = useTranslation()
   const { colors, fonts, fontSize, spacing, radius } = useTheme()
   const previewStitches = seq.rows[0]?.stitches.slice(0, 4) ?? []
   return (
@@ -41,7 +37,7 @@ function SequenceCard({ seq }: { seq: LibrarySequence }) {
             {seq.name}
           </Text>
           <Text style={{ fontFamily: fonts.mono, fontSize: 11, color: colors.inkMute, marginTop: 2 }}>
-            {seq.rows.length} rows · {seq.craft}
+            {t('library.rowsMeta', { count: seq.rows.length, craft: t(`craft.${seq.craft}`) })}
           </Text>
         </View>
       </View>
@@ -50,6 +46,7 @@ function SequenceCard({ seq }: { seq: LibrarySequence }) {
 }
 
 function PatternCard({ pat }: { pat: LibraryPattern }) {
+  const { t } = useTranslation()
   const { colors, fonts, fontSize, spacing, radius } = useTheme()
   return (
     <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.rule, borderRadius: radius.lg }]}>
@@ -62,7 +59,7 @@ function PatternCard({ pat }: { pat: LibraryPattern }) {
             {pat.name}
           </Text>
           <Text style={{ fontFamily: fonts.mono, fontSize: 11, color: colors.inkMute, marginTop: 2 }}>
-            {pat.sequenceIds.length} sequences · {pat.craft}
+            {t('library.seqsMeta', { count: pat.sequenceIds.length, craft: t(`craft.${pat.craft}`) })}
           </Text>
         </View>
       </View>
@@ -95,24 +92,32 @@ function RowCard({ row }: { row: LibraryRow }) {
 }
 
 function EmptyState() {
+  const { t } = useTranslation()
   const { colors, fonts, fontSize } = useTheme()
   return (
     <View style={styles.emptyState}>
       <Icon name="library" size={40} color={colors.inkMute}/>
       <Text style={{ fontFamily: fonts.body, fontSize: fontSize.sm, color: colors.inkMute, marginTop: 12, textAlign: 'center' }}>
-        Nothing here yet. Create your first item above!
+        {t('library.emptyState')}
       </Text>
     </View>
   )
 }
 
 export default function LibraryScreen() {
+  const { t } = useTranslation()
   const { colors, fonts, fontSize, spacing, radius } = useTheme()
   const { sequences, patterns, rows } = useLibraryStore()
   const defaultCraft = useSettingsStore((s) => s.defaultCraft)
   const [tab, setTab] = useState<Tab>('seq')
   const [craft, setCraft] = useState<CraftFilter>(defaultCraft)
   const [query, setQuery] = useState('')
+
+  const TABS: { id: Tab; label: string }[] = [
+    { id: 'pat', label: t('library.tabPatterns')  },
+    { id: 'seq', label: t('library.tabSequences') },
+    { id: 'row', label: t('library.tabRows')      },
+  ]
 
   const filterCraft = <T extends { craft: Craft }>(items: T[]) =>
     craft === 'all' ? items : items.filter((i) => i.craft === craft)
@@ -133,11 +138,15 @@ export default function LibraryScreen() {
     row: visibleRows.length,
   }
 
-  const tabSingular: Record<Tab, string> = { pat: 'pattern', seq: 'sequence', row: 'row' }
+  const tabSingular: Record<Tab, string> = {
+    pat: t('library.kindPattern'),
+    seq: t('library.kindSequence'),
+    row: t('library.kindRow'),
+  }
 
   return (
     <Screen>
-      <AppBar big title="Library" sub="Reuse what you've already built."/>
+      <AppBar big title={t('library.title')} sub={t('library.sub')}/>
 
       <View style={{ paddingHorizontal: spacing[5], gap: spacing[2] }}>
         {/* Search */}
@@ -146,7 +155,7 @@ export default function LibraryScreen() {
           <TextInput
             value={query}
             onChangeText={setQuery}
-            placeholder="Search by name, stitch, vibe…"
+            placeholder={t('library.searchPlaceholder')}
             placeholderTextColor={colors.inkMute}
             style={{ flex: 1, fontFamily: fonts.body, fontSize: fontSize.sm, color: colors.ink }}
           />
@@ -161,7 +170,7 @@ export default function LibraryScreen() {
             >
               <Icon name="plus" size={16} color="#FBF6EC"/>
               <Text style={{ fontFamily: fonts.bodySb, fontSize: fontSize.sm, color: '#FBF6EC' }}>
-                New {tabSingular[tab]}
+                {t('library.newItem', { kind: tabSingular[tab] })}
               </Text>
             </LinearGradient>
           )}
@@ -189,7 +198,7 @@ export default function LibraryScreen() {
                   <Icon name={c === 'knit' ? 'needle' : 'loop'} size={13} color={active ? colors.bg : colors.inkSoft}/>
                 )}
                 <Text style={{ fontFamily: fonts.bodySb, fontSize: 12, color: active ? colors.bg : colors.inkSoft }}>
-                  {c.charAt(0).toUpperCase() + c.slice(1)}
+                  {c === 'all' ? t('craft.all') : c === 'knit' ? t('craft.knit') : t('craft.crochet')}
                 </Text>
               </Pressable>
             )

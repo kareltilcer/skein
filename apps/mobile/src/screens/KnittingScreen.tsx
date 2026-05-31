@@ -2,6 +2,7 @@ import React, { useMemo } from 'react'
 import { View, Text, ScrollView, StyleSheet } from 'react-native'
 
 import { useRouter } from 'expo-router'
+import { useTranslation } from 'react-i18next'
 import { useTheme } from '../theme/ThemeContext'
 import { useProjectStore, totalRows, completedRows } from '../store/projectStore'
 import { useSettingsStore } from '../store/settingsStore'
@@ -44,6 +45,7 @@ function groupRuns(stitches: StitchInstance[]): { stitchId: string; count: numbe
 }
 
 export default function KnittingScreen({ projectId }: Props) {
+  const { t } = useTranslation()
   const { colors, fonts, fontSize, spacing, radius } = useTheme()
   const router = useRouter()
   const project = useProjectStore((s) => s.projects.find((p) => p.id === projectId))
@@ -54,7 +56,7 @@ export default function KnittingScreen({ projectId }: Props) {
   if (!project) {
     return (
       <Screen>
-        <Text style={{ color: colors.inkMute, textAlign: 'center', marginTop: 40 }}>Project not found.</Text>
+        <Text style={{ color: colors.inkMute, textAlign: 'center', marginTop: 40 }}>{t('knitting.notFound')}</Text>
       </Screen>
     )
   }
@@ -104,7 +106,7 @@ export default function KnittingScreen({ projectId }: Props) {
         <View style={[styles.seqCard, { backgroundColor: colors.card, borderColor: colors.rule, borderRadius: radius.lg, marginHorizontal: spacing[5], marginTop: 14 }]}>
           <View style={{ flex: 1 }}>
             <Text style={{ fontFamily: fonts.mono, fontSize: 10, color: colors.inkMute, letterSpacing: 1.6, textTransform: 'uppercase' }}>
-              Sequence {project.currentSequenceIndex + 1} of {part?.sequences.length ?? 1}
+              {t('knitting.sequenceOf', { current: project.currentSequenceIndex + 1, total: part?.sequences.length ?? 1 })}
             </Text>
             <Text style={{ fontFamily: fonts.bodySb, fontSize: fontSize.base, color: colors.ink, marginTop: 2 }}>
               {seq.name}
@@ -122,7 +124,7 @@ export default function KnittingScreen({ projectId }: Props) {
       {/* row counter */}
       <View style={[styles.counterRow, { marginHorizontal: spacing[5], marginTop: 14 }]}>
         <View style={styles.counterLeft}>
-          <Text style={{ fontFamily: fonts.mono, fontSize: 11, color: colors.inkMute, letterSpacing: 1.6, textTransform: 'uppercase' }}>Row</Text>
+          <Text style={{ fontFamily: fonts.mono, fontSize: 11, color: colors.inkMute, letterSpacing: 1.6, textTransform: 'uppercase' }}>{t('knitting.rowLabel')}</Text>
           <Text style={{ fontFamily: fonts.display, fontSize: 56, color: colors.brick, lineHeight: 60, letterSpacing: -2 }}>
             {project.currentRowIndex + 1}
           </Text>
@@ -151,9 +153,9 @@ export default function KnittingScreen({ projectId }: Props) {
       }]}>
         <View style={styles.heroHeader}>
           <Text style={{ fontFamily: fonts.mono, fontSize: 10, color: colors.inkMute, letterSpacing: 1.6, textTransform: 'uppercase' }}>
-            This row · {totalSts} sts
+            {t('knitting.thisRow', { count: totalSts })}
           </Text>
-          <Text style={{ fontFamily: fonts.mono, fontSize: 10, color: colors.inkMute }}>read →</Text>
+          <Text style={{ fontFamily: fonts.mono, fontSize: 10, color: colors.inkMute }}>{t('knitting.readArrow')}</Text>
         </View>
 
         <ScrollView contentContainerStyle={styles.chipFlow}>
@@ -164,7 +166,7 @@ export default function KnittingScreen({ projectId }: Props) {
           )}
           {totalSts === 0 && (
             <Text style={{ fontFamily: fonts.body, fontSize: fontSize.sm, color: colors.inkMute, textAlign: 'center', padding: 20 }}>
-              No stitches defined for this row.
+              {t('knitting.emptyRow')}
             </Text>
           )}
         </ScrollView>
@@ -193,8 +195,8 @@ export default function KnittingScreen({ projectId }: Props) {
           />
           <View style={{ flex: 1 }}>
             <HoldButton
-              label="Row done"
-              sub={`hold ${(holdTimeMs / 1000).toFixed(1)} sec`}
+              label={t('knitting.rowDone')}
+              sub={t('knitting.holdSeconds', { seconds: (holdTimeMs / 1000).toFixed(1) })}
               holdMs={holdTimeMs}
               color={colors.brick}
               ringColor={colors.mustard}
@@ -204,7 +206,7 @@ export default function KnittingScreen({ projectId }: Props) {
           </View>
         </View>
         <Text style={{ fontFamily: fonts.mono, fontSize: 10, color: colors.inkMute, letterSpacing: 1.2, marginTop: 10, textAlign: 'center' }}>
-          press {'&'} hold so your cat can't ruin everything
+          {t('knitting.catCaption')}
         </Text>
       </View>
     </Screen>

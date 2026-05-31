@@ -3,6 +3,7 @@ import { View, Text, ScrollView, Pressable, StyleSheet } from 'react-native'
 
 import { useRouter } from 'expo-router'
 import { LinearGradient } from 'expo-linear-gradient'
+import { useTranslation } from 'react-i18next'
 import Svg, { Circle, Path } from 'react-native-svg'
 import { useTheme } from '../theme/ThemeContext'
 import { useProjectStore } from '../store/projectStore'
@@ -26,6 +27,7 @@ function SkeinLogoSmall({ fg = '#9C3D2E', accent = '#D4923B', size = 32 }) {
 }
 
 export default function HomeScreen() {
+  const { t } = useTranslation()
   const { colors, fonts, fontSize, spacing, radius } = useTheme()
   const router = useRouter()
   const projects = useProjectStore((s) => s.projects)
@@ -37,12 +39,17 @@ export default function HomeScreen() {
   const openProject = (p: Project) => router.push(`/project/${p.id}`)
   const goSetup     = () => router.push('/setup')
 
+  const subTitle =
+    t('home.subActive', { count: active.length })
+    + (finished.length ? t('home.subFinishedSuffix', { count: finished.length }) : '')
+    + t('home.subTrail')
+
   return (
     <Screen>
       <AppBar
         big
-        title="Hey, Knitter"
-        sub={`${active.length} on the needles${finished.length ? ` · ${finished.length} in the basket` : ''}.`}
+        title={t('home.title')}
+        sub={subTitle}
         leading={<SkeinLogoSmall fg={colors.brick} accent={colors.mustard}/>}
         trailing={<IconBtn name="search"/>}
       />
@@ -63,10 +70,10 @@ export default function HomeScreen() {
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={{ fontFamily: fonts.display, fontSize: fontSize.xl, color: '#FBF6EC', letterSpacing: -0.3 }}>
-                  Cast on a project
+                  {t('home.castOn')}
                 </Text>
                 <Text style={{ fontFamily: fonts.body, fontSize: fontSize.xs, color: '#FBF6EC', opacity: 0.85, marginTop: 2 }}>
-                  Build your pattern step by step.
+                  {t('home.castOnSub')}
                 </Text>
               </View>
               <Icon name="chevR" size={20} color="#FBF6EC"/>
@@ -79,9 +86,9 @@ export default function HomeScreen() {
           <>
             <View style={styles.sectionHeader}>
               <Text style={{ fontFamily: fonts.mono, fontSize: 11, color: colors.inkMute, letterSpacing: 2, textTransform: 'uppercase' }}>
-                On the needles · {active.length}
+                {t('home.onTheNeedles')} · {active.length}
               </Text>
-              <Text style={{ fontFamily: fonts.mono, fontSize: 11, color: colors.inkMute }}>Recent</Text>
+              <Text style={{ fontFamily: fonts.mono, fontSize: 11, color: colors.inkMute }}>{t('home.recent')}</Text>
             </View>
             {active.map((p) => (
               <ProjectCard key={p.id} project={p} onPress={() => openProject(p)}/>
@@ -90,7 +97,7 @@ export default function HomeScreen() {
         ) : (
           <View style={[styles.emptyHint, { backgroundColor: colors.card, borderColor: colors.rule, borderRadius: radius.lg }]}>
             <Text style={{ fontFamily: fonts.body, fontSize: fontSize.sm, color: colors.inkMute, textAlign: 'center' }}>
-              No projects yet. Cast on your first one above!
+              {t('home.emptyHint')}
             </Text>
           </View>
         )}
@@ -107,7 +114,7 @@ export default function HomeScreen() {
                   <Icon name="check" size={16} color={colors.forest}/>
                 </View>
                 <Text style={{ fontFamily: fonts.mono, fontSize: 11, color: colors.inkSoft, letterSpacing: 2, textTransform: 'uppercase' }}>
-                  Finished · {finished.length}
+                  {t('home.finished')} · {finished.length}
                 </Text>
               </View>
               <Icon name="chevDown" size={16} color={colors.inkMute}/>

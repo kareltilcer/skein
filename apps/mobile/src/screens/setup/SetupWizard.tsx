@@ -4,6 +4,7 @@ import {BlurView} from 'expo-blur'
 import {LinearGradient} from 'expo-linear-gradient'
 
 import {useRouter} from 'expo-router'
+import {useTranslation} from 'react-i18next'
 import {useTheme} from '../../theme/ThemeContext'
 import {useProjectStore} from '../../store/projectStore'
 import {useSettingsStore} from '../../store/settingsStore'
@@ -102,10 +103,13 @@ function uuid4() {
     return Math.random().toString(36).slice(2) + Date.now().toString(36)
 }
 
-function partMeta(part: DraftPart): string {
-    const seqCount = part.sequences.length
-    const rowCount = part.sequences.reduce((s, seq) => s + seq.rows.length, 0)
-    return `${seqCount} sequence${seqCount !== 1 ? 's' : ''} · ~${rowCount} rows`
+function usePartMeta() {
+    const { t } = useTranslation()
+    return (part: DraftPart): string => {
+        const seqCount = part.sequences.length
+        const rowCount = part.sequences.reduce((s, seq) => s + seq.rows.length, 0)
+        return t('wizard.partMeta', { count: seqCount, seqCount, rowCount })
+    }
 }
 
 function WizardSteps({step}: { step: number }) {
@@ -136,6 +140,7 @@ type Step1Handle = { scrollToRequired: () => void }
 const Step1 = forwardRef<Step1Handle, {
     draft: Draft; onChange: (d: Draft) => void; requiredError?: boolean
 }>(function Step1({draft, onChange, requiredError = false}, ref) {
+    const { t } = useTranslation()
     const {colors, fonts, fontSize, spacing, radius} = useTheme()
     const scrollRef = useRef<ScrollView>(null)
     const nameY = useRef(0)
@@ -161,12 +166,12 @@ const Step1 = forwardRef<Step1Handle, {
         state === 'mid' ? colors.mustardDk : colors.forest
 
     const stateMsg: Record<string, string> = {
-        empty:    'Give it a name — anything will do.',
-        ok:       'Looks good. Future-you will thank you.',
-        mid:      'Plenty of room.',
-        near:     'Getting close to the limit.',
-        over:     'Whoops — too long. I have to stop you.',
-        required: "This one's required — give your project a name to cast on.",
+        empty:    t('wizard.nameStateEmpty'),
+        ok:       t('wizard.nameStateOk'),
+        mid:      t('wizard.nameStateMid'),
+        near:     t('wizard.nameStateNear'),
+        over:     t('wizard.nameStateOver'),
+        required: t('wizard.nameStateRequired'),
     }
 
     const isErr = state === 'required'
@@ -177,7 +182,7 @@ const Step1 = forwardRef<Step1Handle, {
             <View onLayout={(e) => { nameY.current = e.nativeEvent.layout.y }}>
                 <View style={{flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8}}>
                     <Text style={[styles.sectionLabel, {color: colors.inkMute, fontFamily: fonts.mono}]}>
-                        Name your project
+                        {t('wizard.nameYourProject')}
                     </Text>
                     {isErr && (
                         <View style={{
@@ -189,7 +194,7 @@ const Step1 = forwardRef<Step1Handle, {
                             <Text style={{
                                 fontFamily: fonts.mono, fontSize: 9.5, fontWeight: '700',
                                 color: '#FBF6EC', letterSpacing: 2,
-                            }}>REQUIRED</Text>
+                            }}>{t('wizard.required')}</Text>
                         </View>
                     )}
                 </View>
@@ -207,8 +212,8 @@ const Step1 = forwardRef<Step1Handle, {
                 }]}>
                     <TextInput
                         value={draft.name}
-                        onChangeText={(t) => onChange({...draft, name: t.slice(0, MAX_NAME)})}
-                        placeholder="e.g. The Granny Cardigan"
+                        onChangeText={(text) => onChange({...draft, name: text.slice(0, MAX_NAME)})}
+                        placeholder={t('wizard.namePlaceholder')}
                         placeholderTextColor={colors.inkMute}
                         style={{
                             fontFamily: fonts.display,
@@ -283,7 +288,7 @@ const Step1 = forwardRef<Step1Handle, {
 
             {/* Craft type */}
             <View>
-                <Text style={[styles.sectionLabel, {color: colors.inkMute, fontFamily: fonts.mono}]}>What kind?</Text>
+                <Text style={[styles.sectionLabel, {color: colors.inkMute, fontFamily: fonts.mono}]}>{t('wizard.whatKind')}</Text>
                 <View style={styles.pillRow}>
                     {(['knit', 'crochet'] as const).map((c) => (
                         <Pressable
@@ -305,7 +310,7 @@ const Step1 = forwardRef<Step1Handle, {
                                 fontSize: 14,
                                 color: draft.craft === c ? '#FBF6EC' : colors.ink
                             }}>
-                                {c.charAt(0).toUpperCase() + c.slice(1)}
+                                {t(`craft.${c}`)}
                             </Text>
                         </Pressable>
                     ))}
@@ -315,10 +320,8 @@ const Step1 = forwardRef<Step1Handle, {
             {/* Yarn weight */}
             <View>
                 <View style={styles.sectionLabelRow}>
-                    <Text style={[styles.sectionLabel, {color: colors.inkMute, fontFamily: fonts.mono}]}>Yarn
-                        weight</Text>
-                    <Text style={{fontFamily: fonts.mono, fontSize: 10, color: colors.inkMute, letterSpacing: 0.5}}>Whatever's
-                        on the label.</Text>
+                    <Text style={[styles.sectionLabel, {color: colors.inkMute, fontFamily: fonts.mono}]}>{t('wizard.yarnWeight')}</Text>
+                    <Text style={{fontFamily: fonts.mono, fontSize: 10, color: colors.inkMute, letterSpacing: 0.5}}>{t('wizard.yarnWeightSub')}</Text>
                 </View>
                 <View style={styles.wrapRow}>
                     {YARN_WEIGHTS.map((w) => (
@@ -350,10 +353,10 @@ const Step1 = forwardRef<Step1Handle, {
             <View>
                 <View style={styles.sectionLabelRow}>
                     <Text style={[styles.sectionLabel, {color: colors.inkMute, fontFamily: fonts.mono}]}>
-                        {draft.craft === 'knit' ? 'Needle size' : 'Hook size'}
+                        {draft.craft === 'knit' ? t('wizard.needleSize') : t('wizard.hookSize')}
                     </Text>
                     <Text style={{fontFamily: fonts.mono, fontSize: 10, color: colors.inkMute, letterSpacing: 0.5}}>
-                        {draft.craft === 'knit' ? 'Knit picked, so needles.' : 'Hooked, so hooks.'}
+                        {draft.craft === 'knit' ? t('wizard.needleSizeSub') : t('wizard.hookSizeSub')}
                     </Text>
                 </View>
                 {(() => {
@@ -401,7 +404,7 @@ const Step1 = forwardRef<Step1Handle, {
                                         color: colors.inkMute,
                                         marginTop: 2
                                     }}>
-                                        typical for {entry.typical} weight
+                                        {t('wizard.typicalFor', { weight: entry.typical })}
                                     </Text>
                                 </View>
                                 <View style={[styles.needleStepper, {
@@ -468,7 +471,7 @@ const Step1 = forwardRef<Step1Handle, {
 
             {/* Yarn color */}
             <View>
-                <Text style={[styles.sectionLabel, {color: colors.inkMute, fontFamily: fonts.mono}]}>Yarn color</Text>
+                <Text style={[styles.sectionLabel, {color: colors.inkMute, fontFamily: fonts.mono}]}>{t('wizard.yarnColor')}</Text>
                 <View style={styles.colorRow}>
                     {YARN_COLORS.map((c) => (
                         <Pressable
@@ -489,8 +492,7 @@ const Step1 = forwardRef<Step1Handle, {
 
             {/* Notes */}
             <View>
-                <Text style={[styles.sectionLabel, {color: colors.inkMute, fontFamily: fonts.mono}]}>Notes
-                    (optional)</Text>
+                <Text style={[styles.sectionLabel, {color: colors.inkMute, fontFamily: fonts.mono}]}>{t('wizard.notesOptional')}</Text>
                 <View style={[styles.notesBox, {
                     backgroundColor: colors.card,
                     borderColor: colors.rule,
@@ -498,8 +500,8 @@ const Step1 = forwardRef<Step1Handle, {
                 }]}>
                     <TextInput
                         value={draft.notes}
-                        onChangeText={(t) => onChange({...draft, notes: t})}
-                        placeholder="Gauge, modifications, anything…"
+                        onChangeText={(text) => onChange({...draft, notes: text})}
+                        placeholder={t('wizard.notesPlaceholder')}
                         placeholderTextColor={colors.inkMute}
                         multiline
                         style={{fontFamily: fonts.body, fontSize: fontSize.sm, color: colors.ink}}
@@ -512,6 +514,8 @@ const Step1 = forwardRef<Step1Handle, {
 
 // ── Step 2 ─────────────────────────────────────────────────────
 function Step2({draft, onChange}: { draft: Draft; onChange: (d: Draft) => void }) {
+    const { t } = useTranslation()
+    const partMeta = usePartMeta()
     const {colors, fonts} = useTheme()
 
     const [sheetMode, setSheetMode] = useState<'add' | 'edit' | null>(null)
@@ -552,7 +556,7 @@ function Step2({draft, onChange}: { draft: Draft; onChange: (d: Draft) => void }
             color: sheetColor,
             notes: sheetNotes.trim() || undefined,
             loop: false,
-            sequences: [{id: uuid4(), name: 'Main sequence', rows: [], totalRepeats: 1, loop: false}],
+            sequences: [{id: uuid4(), name: t('wizard.mainSequence'), rows: [], totalRepeats: 1, loop: false}],
         }
         // First explicit add: replace the implicit default "Main" part instead of appending
         const isFirstAdd = !draft.partsCustomized && draft.parts.length === 1
@@ -663,13 +667,13 @@ function Step2({draft, onChange}: { draft: Draft; onChange: (d: Draft) => void }
                     fontFamily: fonts.display, fontSize: 24, color: colors.brick,
                     letterSpacing: -0.25, lineHeight: 26, textAlign: 'center',
                 }}>
-                    Just the one piece?
+                    {t('wizard.step2EmptyTitle')}
                 </Text>
                 <Text style={{
                     fontFamily: fonts.body, fontSize: 13.5, color: colors.inkSoft,
                     lineHeight: 20, textAlign: 'center', maxWidth: 300,
                 }}>
-                    Scarves, dishcloths, blankets, simple hats — they're a single piece, and Skein's happy with that. Add more parts only if your project splits into separate pieces, like sleeves, panels, or a pocket.
+                    {t('wizard.step2EmptyBody')}
                 </Text>
                 <Pressable
                     onPress={openAddSheet}
@@ -681,13 +685,13 @@ function Step2({draft, onChange}: { draft: Draft; onChange: (d: Draft) => void }
                     }}
                 >
                     <Icon name="plus" size={14} color={colors.brick}/>
-                    <Text style={{fontFamily: fonts.bodySb, fontSize: 14, color: colors.brick}}>Add a part</Text>
+                    <Text style={{fontFamily: fonts.bodySb, fontSize: 14, color: colors.brick}}>{t('wizard.addPart')}</Text>
                 </Pressable>
                 <Text style={{
                     fontFamily: fonts.mono, fontSize: 10, color: colors.inkMute,
                     letterSpacing: 2, textTransform: 'uppercase', marginTop: 2,
                 }}>
-                    ✻ one part is a whole project ✻
+                    {t('wizard.step2DecorativeNote')}
                 </Text>
             </View>
             <View style={{
@@ -698,8 +702,8 @@ function Step2({draft, onChange}: { draft: Draft; onChange: (d: Draft) => void }
             }}>
                 <Icon name="bulb" size={16} color={colors.mustardDk}/>
                 <Text style={{fontFamily: fonts.body, fontSize: 12.5, color: colors.inkSoft, flex: 1, lineHeight: 18}}>
-                    <Text style={{fontWeight: '700', color: colors.ink}}>Not sure? </Text>
-                    Knit a sample first, then come back and split it if you need to. You can add parts at any time.
+                    <Text style={{fontWeight: '700', color: colors.ink}}>{t('common.notSure')} </Text>
+                    {t('wizard.step2EmptyTipBody')}
                 </Text>
             </View>
         </ScrollView>
@@ -713,7 +717,7 @@ function Step2({draft, onChange}: { draft: Draft; onChange: (d: Draft) => void }
                 style={[styles.addPartBtn, {borderColor: colors.rule, borderRadius: 18, paddingVertical: 14}]}
             >
                 <Icon name="plus" size={16} color={colors.brick}/>
-                <Text style={{fontFamily: fonts.bodySb, fontSize: 14, color: colors.brick}}>Add another part</Text>
+                <Text style={{fontFamily: fonts.bodySb, fontSize: 14, color: colors.brick}}>{t('wizard.addAnotherPart')}</Text>
             </Pressable>
             <View style={{
                 backgroundColor: colors.cream2,
@@ -722,8 +726,8 @@ function Step2({draft, onChange}: { draft: Draft; onChange: (d: Draft) => void }
             }}>
                 <Icon name="bulb" size={16} color={colors.mustardDk}/>
                 <Text style={{fontFamily: fonts.body, fontSize: 12.5, color: colors.inkSoft, flex: 1, lineHeight: 18}}>
-                    <Text style={{fontWeight: '700', color: colors.ink}}>Tip: </Text>
-                    Drag to reorder. Knit them in whatever order makes sense — Skein only tracks one part at a time.
+                    <Text style={{fontWeight: '700', color: colors.ink}}>{t('common.tip')} </Text>
+                    {t('wizard.step2PopulatedTipBody')}
                 </Text>
             </View>
         </View>
@@ -745,11 +749,11 @@ function Step2({draft, onChange}: { draft: Draft; onChange: (d: Draft) => void }
     // the next slot is 1, not draft.parts.length + 1 (which would count "Main" as slot 1).
     const nextSlotNumber = !draft.partsCustomized && draft.parts.length === 1 ? 1 : draft.parts.length + 1
     const sheetSlotLabel = isEdit
-        ? `Editing part ${editingIdx + 1} of ${draft.parts.length}`
-        : `New part · slot ${nextSlotNumber}`
+        ? t('wizard.partSheetEditingSlot', { current: editingIdx + 1, total: draft.parts.length })
+        : t('wizard.partSheetNewSlot', { slot: nextSlotNumber })
     const sheetTitle = isEdit
-        ? `Edit the ${draft.parts.find(p => p.id === editingPartId)?.name ?? ''}`
-        : 'Add a part'
+        ? t('wizard.partSheetEditTitle', { name: draft.parts.find(p => p.id === editingPartId)?.name ?? '' })
+        : t('wizard.partSheetAddTitle')
     const sheetTileNumber = isEdit ? editingIdx + 1 : nextSlotNumber
 
     const partSheet = (
@@ -845,13 +849,13 @@ function Step2({draft, onChange}: { draft: Draft; onChange: (d: Draft) => void }
                                         fontFamily: fonts.mono, fontSize: 9.5,
                                         color: colors.inkMute, letterSpacing: 1.5,
                                         textTransform: 'uppercase',
-                                    }}>Preview</Text>
+                                    }}>{t('wizard.preview')}</Text>
                                 </View>
                                 <View style={{flex: 1}}>
                                     <Text style={{
                                         fontFamily: fonts.mono, fontSize: 10.5, color: colors.inkMute,
                                         letterSpacing: 1.7, textTransform: 'uppercase', marginBottom: 6,
-                                    }}>Part name</Text>
+                                    }}>{t('wizard.partName')}</Text>
                                     <View style={{
                                         backgroundColor: colors.card,
                                         borderWidth: 2, borderColor: colors.brick,
@@ -867,7 +871,7 @@ function Step2({draft, onChange}: { draft: Draft; onChange: (d: Draft) => void }
                                             ref={nameInputRef}
                                             value={sheetName}
                                             onChangeText={setSheetName}
-                                            placeholder="e.g. Left sleeve"
+                                            placeholder={t('wizard.partNamePlaceholder')}
                                             placeholderTextColor={colors.inkMute}
                                             style={{
                                                 fontFamily: fonts.display, fontSize: 22,
@@ -882,7 +886,7 @@ function Step2({draft, onChange}: { draft: Draft; onChange: (d: Draft) => void }
                                 fontFamily: fonts.mono, fontSize: 10.5, color: colors.inkMute,
                                 letterSpacing: 1.7, textTransform: 'uppercase', marginBottom: 10,
                                 marginTop: 22,
-                            }}>Tile color</Text>
+                            }}>{t('wizard.tileColor')}</Text>
                             <View style={{flexDirection: 'row', gap: 10, flexWrap: 'wrap', marginBottom: 22}}>
                                 {PART_COLORS.map(c => (
                                     <Pressable
@@ -904,8 +908,8 @@ function Step2({draft, onChange}: { draft: Draft; onChange: (d: Draft) => void }
                             </View>
                             {/* Notes */}
                             <View style={{flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 8}}>
-                                <Text style={{fontFamily: fonts.mono, fontSize: 10.5, color: colors.inkMute, letterSpacing: 1.7, textTransform: 'uppercase'}}>Notes</Text>
-                                <Text style={{fontFamily: fonts.mono, fontSize: 10, color: colors.inkMute, letterSpacing: 0.5}}>optional · just for you</Text>
+                                <Text style={{fontFamily: fonts.mono, fontSize: 10.5, color: colors.inkMute, letterSpacing: 1.7, textTransform: 'uppercase'}}>{t('wizard.notes')}</Text>
+                                <Text style={{fontFamily: fonts.mono, fontSize: 10, color: colors.inkMute, letterSpacing: 0.5}}>{t('wizard.notesHint')}</Text>
                             </View>
                             <View style={{
                                 backgroundColor: colors.card, borderWidth: 1, borderColor: colors.rule,
@@ -914,7 +918,7 @@ function Step2({draft, onChange}: { draft: Draft; onChange: (d: Draft) => void }
                                 <TextInput
                                     value={sheetNotes}
                                     onChangeText={setSheetNotes}
-                                    placeholder="e.g. 'knit in the round, switch to DPN at decreases'"
+                                    placeholder={t('wizard.partNotesPlaceholder')}
                                     placeholderTextColor={colors.inkMute}
                                     multiline
                                     style={{fontFamily: fonts.body, fontSize: 13.5, color: colors.ink, lineHeight: 20}}
@@ -936,17 +940,14 @@ function Step2({draft, onChange}: { draft: Draft; onChange: (d: Draft) => void }
                                             borderRadius: 14, paddingVertical: 12, paddingHorizontal: 14,
                                         }}
                                     >
-                                        <Icon name="trash" size={16} color={colors.brick}/>
-                                        <Text style={{fontFamily: fonts.bodySb, fontSize: 14, color: colors.brick}}>Remove this part</Text>
+                                            <Icon name="trash" size={16} color={colors.brick}/>
+                                        <Text style={{fontFamily: fonts.bodySb, fontSize: 14, color: colors.brick}}>{t('wizard.removeThisPart')}</Text>
                                     </Pressable>
                                     <Text style={{
                                         fontFamily: fonts.mono, fontSize: 10, color: colors.inkMute,
                                         letterSpacing: 0.5, textAlign: 'center', marginTop: 8,
                                     }}>
-                                        {(() => {
-                                            const seqCount = draft.parts.find(p => p.id === editingPartId)?.sequences.length ?? 0
-                                            return `Its ${seqCount} sequence${seqCount !== 1 ? 's' : ''} will stay in your Library.`
-                                        })()}
+                                        {t('wizard.removeWarning', { count: draft.parts.find(p => p.id === editingPartId)?.sequences.length ?? 0 })}
                                     </Text>
                                 </View>
                             )}
@@ -958,7 +959,7 @@ function Step2({draft, onChange}: { draft: Draft; onChange: (d: Draft) => void }
                             borderTopWidth: 1, borderTopColor: colors.rule,
                             backgroundColor: colors.bg,
                         }}>
-                            <Btn variant="ghost" size="lg" onPress={closeSheet}>Cancel</Btn>
+                            <Btn variant="ghost" size="lg" onPress={closeSheet}>{t('common.cancel')}</Btn>
                             <View style={{flex: 1}}>
                                 <Btn
                                     variant="primary" size="lg"
@@ -966,7 +967,7 @@ function Step2({draft, onChange}: { draft: Draft; onChange: (d: Draft) => void }
                                     full
                                     onPress={isEdit ? confirmEdit : confirmAdd}
                                 >
-                                    {isEdit ? 'Save changes' : 'Add part'}
+                                    {isEdit ? t('wizard.saveChanges') : t('wizard.addPartConfirm')}
                                 </Btn>
                             </View>
                         </View>
@@ -993,6 +994,7 @@ function Step3({draft, onChange, initialFocus, onFocusConsumed}: {
     initialFocus?: Step3Focus | null
     onFocusConsumed?: () => void
 }) {
+    const { t } = useTranslation()
     const {colors, fonts, spacing} = useTheme()
     const recentStitchIds  = useSettingsStore(s => s.recentStitchIds)
     const recordStitchUsed = useSettingsStore(s => s.recordStitchUsed)
@@ -1054,7 +1056,7 @@ function Step3({draft, onChange, initialFocus, onFocusConsumed}: {
 
     const addRow = (seqIdx: number) => {
         const seq = part!.sequences[seqIdx]!
-        const newRow: DraftRow = {id: uuid4(), label: `Row ${seq.rows.length + 1}`, stitches: []}
+        const newRow: DraftRow = {id: uuid4(), label: t('wizard.rowLabel', { n: seq.rows.length + 1 }), stitches: []}
         const newRowIdx = seq.rows.length
         updateSeq(activePart, seqIdx, {...seq, rows: [...seq.rows, newRow]})
         setActiveRow({partIdx: activePart, seqIdx, rowIdx: newRowIdx})
@@ -1145,7 +1147,7 @@ function Step3({draft, onChange, initialFocus, onFocusConsumed}: {
 
     const addSeq = () => {
         const newSeq: DraftSequence = {
-            id: uuid4(), name: `Sequence ${part!.sequences.length + 1}`,
+            id: uuid4(), name: t('wizard.sequenceLabel', { n: part!.sequences.length + 1 }),
             rows: [], totalRepeats: 1, loop: false,
         }
         const updatedPart = {...part!, sequences: [...part!.sequences, newSeq]}
@@ -1291,9 +1293,9 @@ function Step3({draft, onChange, initialFocus, onFocusConsumed}: {
                                         </Text>
                                     )}
                                     <Text style={{fontFamily: fonts.mono, fontSize: 10.5, color: colors.inkMute, marginTop: 3}}>
-                                        {seq.rows.length} rows · {totalSts} sts
+                                        {t('common.rows', { count: seq.rows.length })} · {t('common.sts', { count: totalSts })}
                                         {isEditing && (
-                                            <Text style={{color: colors.brick, fontWeight: '700'}}> · editing ✱</Text>
+                                            <Text style={{color: colors.brick, fontWeight: '700'}}>{t('wizard.step3EditingMark')}</Text>
                                         )}
                                     </Text>
                                 </View>
@@ -1315,7 +1317,7 @@ function Step3({draft, onChange, initialFocus, onFocusConsumed}: {
                                         <Text style={{
                                             fontFamily: fonts.mono, fontSize: 9.5, fontWeight: '700',
                                             color: colors.brick, letterSpacing: 1.4, textTransform: 'uppercase',
-                                        }}>Delete</Text>
+                                        }}>{t('common.delete')}</Text>
                                     </Pressable>
                                 ) : (
                                     <View style={{flexDirection: 'row', alignItems: 'center', gap: 10, flexShrink: 0}}>
@@ -1361,7 +1363,7 @@ function Step3({draft, onChange, initialFocus, onFocusConsumed}: {
                                                     {row.label}{isActive ? ' ✱' : ''}
                                                 </Text>
                                                 <Text style={{fontFamily: fonts.mono, fontSize: 10, color: colors.inkMute}}>
-                                                    · {totalSts} sts
+                                                    · {t('common.sts', { count: totalSts })}
                                                 </Text>
                                             </View>
                                             <View style={{flexDirection: 'row', alignItems: 'center', gap: 10, flexShrink: 0}}>
@@ -1401,7 +1403,7 @@ function Step3({draft, onChange, initialFocus, onFocusConsumed}: {
                                             </View>
                                         ) : (
                                             <Text style={{fontFamily: fonts.mono, fontSize: 11, color: colors.inkMute, fontStyle: 'italic', paddingTop: 6, paddingBottom: 2}}>
-                                                empty · tap a stitch below to start filling
+                                                {t('wizard.step3EmptyRow')}
                                             </Text>
                                         )}
                                     </Pressable>
@@ -1415,14 +1417,14 @@ function Step3({draft, onChange, initialFocus, onFocusConsumed}: {
                                     style={{flex: 1.1, borderWidth: 1.5, borderStyle: 'dashed', borderColor: colors.brick, borderRadius: 14, paddingVertical: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6}}
                                 >
                                     <Icon name="plus" size={14} color={colors.brick}/>
-                                    <Text style={{fontFamily: fonts.bodySb, fontSize: 13, color: colors.brick}}>New row</Text>
+                                    <Text style={{fontFamily: fonts.bodySb, fontSize: 13, color: colors.brick}}>{t('wizard.step3NewRow')}</Text>
                                 </Pressable>
                                 <Pressable
                                     onPress={() => { setRowPickerSeqIdx(si); setShowRowPicker(true) }}
                                     style={{flex: 1, borderWidth: 1, borderColor: colors.rule, backgroundColor: colors.card, borderRadius: 14, paddingVertical: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6}}
                                 >
                                     <Icon name="library" size={14} color={colors.mustardDk}/>
-                                    <Text style={{fontFamily: fonts.bodySb, fontSize: 13, color: colors.ink}}>Row from lib</Text>
+                                    <Text style={{fontFamily: fonts.bodySb, fontSize: 13, color: colors.ink}}>{t('wizard.step3RowFromLib')}</Text>
                                     <View style={{backgroundColor: colors.cream2, borderRadius: 6, paddingHorizontal: 6, paddingVertical: 1}}>
                                         <Text style={{fontFamily: fonts.mono, fontSize: 10, color: colors.inkMute, fontWeight: '700', letterSpacing: 0.5}}>{libraryRows.length}</Text>
                                     </View>
@@ -1447,7 +1449,7 @@ function Step3({draft, onChange, initialFocus, onFocusConsumed}: {
                         }}
                     >
                         <Icon name="plus" size={14} color={colors.brick}/>
-                        <Text style={{fontFamily: fonts.bodySb, fontSize: 13, color: colors.brick}}>New sequence</Text>
+                        <Text style={{fontFamily: fonts.bodySb, fontSize: 13, color: colors.brick}}>{t('wizard.step3NewSequence')}</Text>
                     </Pressable>
                     <Pressable
                         onPress={() => setShowSeqPicker(true)}
@@ -1459,7 +1461,7 @@ function Step3({draft, onChange, initialFocus, onFocusConsumed}: {
                         }}
                     >
                         <Icon name="library" size={14} color={colors.mustardDk}/>
-                        <Text style={{fontFamily: fonts.bodySb, fontSize: 13, color: colors.ink}}>Seq. from lib</Text>
+                        <Text style={{fontFamily: fonts.bodySb, fontSize: 13, color: colors.ink}}>{t('wizard.step3SeqFromLib')}</Text>
                         <View style={{backgroundColor: colors.cream2, borderRadius: 6, paddingHorizontal: 6, paddingVertical: 1}}>
                             <Text style={{fontFamily: fonts.mono, fontSize: 10, color: colors.inkMute, fontWeight: '700', letterSpacing: 0.5}}>{librarySequences.length + libraryPatterns.length}</Text>
                         </View>
@@ -1470,8 +1472,8 @@ function Step3({draft, onChange, initialFocus, onFocusConsumed}: {
                 <View style={{marginTop: 14, paddingVertical: 10, paddingHorizontal: 12, backgroundColor: colors.cream2, borderRadius: 12, flexDirection: 'row', gap: 8, alignItems: 'flex-start'}}>
                     <Icon name="bulb" size={14} color={colors.mustardDk}/>
                     <Text style={{fontFamily: fonts.body, fontSize: 12, color: colors.inkSoft, flex: 1, lineHeight: 18}}>
-                        <Text style={{fontWeight: '700', color: colors.ink}}>Tip: </Text>
-                        Tap any row to focus it — the stitch dock fills that row.
+                        <Text style={{fontWeight: '700', color: colors.ink}}>{t('common.tip')} </Text>
+                        {t('wizard.step3TipBody')}
                     </Text>
                 </View>
             </ScrollView>
@@ -1485,11 +1487,11 @@ function Step3({draft, onChange, initialFocus, onFocusConsumed}: {
                 }}>
                     <View style={{flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8}}>
                         <Text style={{fontFamily: fonts.mono, fontSize: 10, color: colors.brick, fontWeight: '700', letterSpacing: 1.4, textTransform: 'uppercase'}}>
-                            Tap to add to {draft.parts[activeRow!.partIdx]?.sequences[activeRow!.seqIdx]?.name ?? ''} · Row {activeRow!.rowIdx + 1} ✱
+                            {t('wizard.step3TapToAdd', { name: draft.parts[activeRow!.partIdx]?.sequences[activeRow!.seqIdx]?.name ?? '', rowNumber: activeRow!.rowIdx + 1 })}
                         </Text>
                         <Pressable onPress={() => setShowStitchPicker(true)} style={{flexDirection: 'row', alignItems: 'center', gap: 4}}>
                             <Text style={{fontFamily: fonts.mono, fontSize: 11, color: colors.brick, fontWeight: '700'}}>
-                                All {totalStitchCount} stitches
+                                {t('wizard.step3AllStitches', { count: totalStitchCount })}
                             </Text>
                             <Icon name="chevR" size={12} color={colors.brick}/>
                         </Pressable>
@@ -1622,13 +1624,13 @@ function Step3({draft, onChange, initialFocus, onFocusConsumed}: {
                                             fontFamily: fonts.display, fontSize: 24, color: colors.brick,
                                             letterSpacing: -0.25, lineHeight: 26, textAlign: 'center',
                                         }}>
-                                            Remove this row?
+                                            {t('wizard.removeRowTitle')}
                                         </Text>
                                         <Text style={{
                                             fontFamily: fonts.mono, fontSize: 10.5, color: colors.inkMute,
                                             letterSpacing: 2, textTransform: 'uppercase',
                                         }}>
-                                            No undo · {totalSts} stitch{totalSts !== 1 ? 'es' : ''} lost
+                                            {t('wizard.removeRowNoUndo', { count: totalSts })}
                                         </Text>
                                     </View>
                                 </View>
@@ -1647,7 +1649,7 @@ function Step3({draft, onChange, initialFocus, onFocusConsumed}: {
                                                 {diagRow?.label}
                                             </Text>
                                             <Text style={{fontFamily: fonts.mono, fontSize: 10.5, color: colors.inkMute}}>
-                                                · {totalSts} sts
+                                                · {t('common.sts', { count: totalSts })}
                                             </Text>
                                             <View style={{flex: 1}}/>
                                             <Text style={{fontFamily: fonts.mono, fontSize: 10, color: colors.inkMute, letterSpacing: 0.6}}>
@@ -1694,7 +1696,7 @@ function Step3({draft, onChange, initialFocus, onFocusConsumed}: {
                                         fontFamily: fonts.body, lineHeight: 19,
                                         textAlign: 'center', paddingHorizontal: 4,
                                     }}>
-                                        The rows above and below will shift up — neighboring rows aren't affected.
+                                        {t('wizard.removeRowBody')}
                                     </Text>
                                 </View>
 
@@ -1715,7 +1717,7 @@ function Step3({draft, onChange, initialFocus, onFocusConsumed}: {
                                     >
                                         <Icon name="trash" size={16} color="#FBF6EC"/>
                                         <Text style={{fontFamily: fonts.bodySb, fontSize: 15, color: '#FBF6EC', letterSpacing: -0.1}}>
-                                            Yes, remove row
+                                            {t('wizard.removeRowConfirm')}
                                         </Text>
                                     </Pressable>
                                     <Pressable
@@ -1727,7 +1729,7 @@ function Step3({draft, onChange, initialFocus, onFocusConsumed}: {
                                         }}
                                     >
                                         <Text style={{fontFamily: fonts.bodySb, fontSize: 14.5, color: colors.ink, letterSpacing: -0.1}}>
-                                            Keep it
+                                            {t('common.keepIt')}
                                         </Text>
                                     </Pressable>
                                 </View>
@@ -1796,13 +1798,13 @@ function Step3({draft, onChange, initialFocus, onFocusConsumed}: {
                                             fontFamily: fonts.display, fontSize: 24, color: colors.brick,
                                             letterSpacing: -0.25, lineHeight: 26, textAlign: 'center',
                                         }}>
-                                            Delete this whole sequence?
+                                            {t('wizard.removeSeqTitle')}
                                         </Text>
                                         <Text style={{
                                             fontFamily: fonts.mono, fontSize: 10.5, color: colors.inkMute,
                                             letterSpacing: 2, textTransform: 'uppercase',
                                         }}>
-                                            No undo · {rowCount} row{rowCount !== 1 ? 's' : ''} · {totalSts} stitch{totalSts !== 1 ? 'es' : ''} lost
+                                            {t('wizard.removeSeqNoUndo', { count: rowCount, rows: rowCount, stsLabel: t('wizard.removeSeqStitchLabel', { count: totalSts }) })}
                                         </Text>
                                     </View>
                                 </View>
@@ -1836,7 +1838,7 @@ function Step3({draft, onChange, initialFocus, onFocusConsumed}: {
                                                 {diagSeq?.name}
                                             </Text>
                                             <Text style={{fontFamily: fonts.mono, fontSize: 10, color: colors.inkMute, flexShrink: 0}}>
-                                                {rowCount} row{rowCount !== 1 ? 's' : ''}
+                                                {t('common.rows', { count: rowCount })}
                                             </Text>
                                         </View>
                                         {/* Per-row mini preview */}
@@ -1863,7 +1865,7 @@ function Step3({draft, onChange, initialFocus, onFocusConsumed}: {
                                                             <Text style={{
                                                                 fontFamily: fonts.mono, fontSize: 9.5,
                                                                 color: colors.inkMute, fontStyle: 'italic',
-                                                            }}>empty</Text>
+                                                            }}>{t('wizard.rowEmpty')}</Text>
                                                         ) : (
                                                             <View style={{flexDirection: 'row', flexWrap: 'wrap', gap: 2, flex: 1}}>
                                                                 {chips.map((chip, i) => {
@@ -1910,7 +1912,7 @@ function Step3({draft, onChange, initialFocus, onFocusConsumed}: {
                                         fontFamily: fonts.body, lineHeight: 19,
                                         textAlign: 'center', paddingHorizontal: 4,
                                     }}>
-                                        Every row inside moves with it. Other sequences in this part shift up — they aren't affected.
+                                        {t('wizard.removeSeqBody')}
                                     </Text>
                                 </View>
 
@@ -1931,7 +1933,7 @@ function Step3({draft, onChange, initialFocus, onFocusConsumed}: {
                                     >
                                         <Icon name="trash" size={16} color="#FBF6EC"/>
                                         <Text style={{fontFamily: fonts.bodySb, fontSize: 15, color: '#FBF6EC', letterSpacing: -0.1}}>
-                                            Yes, delete sequence
+                                            {t('wizard.removeSeqConfirm')}
                                         </Text>
                                     </Pressable>
                                     <Pressable
@@ -1943,7 +1945,7 @@ function Step3({draft, onChange, initialFocus, onFocusConsumed}: {
                                         }}
                                     >
                                         <Text style={{fontFamily: fonts.bodySb, fontSize: 14.5, color: colors.ink, letterSpacing: -0.1}}>
-                                            Keep it
+                                            {t('common.keepIt')}
                                         </Text>
                                     </Pressable>
                                 </View>
@@ -1963,6 +1965,7 @@ function Step4({draft, onChange, onJumpToStep3}: {
     onChange: (d: Draft) => void
     onJumpToStep3: (partIdx: number, seqId: string) => void
 }) {
+    const { t } = useTranslation()
     const {colors, fonts, spacing} = useTheme()
     const librarySequences = useLibraryStore(s => s.sequences)
 
@@ -2074,7 +2077,7 @@ function Step4({draft, onChange, onJumpToStep3}: {
                                 {seq.name}
                             </Text>
                             <Text style={{fontFamily: fonts.mono, fontSize: 11.5, color: colors.inkMute, marginTop: 1}}>
-                                {rowN} row{rowN === 1 ? '' : 's'} × {seq.totalRepeats} = {total} total
+                                {t('wizard.step4RowsBreakdown', { count: rowN, rows: rowN, repeats: seq.totalRepeats, total })}
                             </Text>
                         </View>
                         <Pressable onPress={() => onJumpToStep3(safeActive, seq.id)} hitSlop={8}>
@@ -2102,7 +2105,7 @@ function Step4({draft, onChange, onJumpToStep3}: {
                             fontFamily: fonts.mono, fontSize: 10,
                             color: colors.inkMute, paddingHorizontal: 6,
                         }}>
-                            {rowN === 0 ? 'no rows yet' : `+ ${moreRows} more row${moreRows === 1 ? '' : 's'}`}
+                            {rowN === 0 ? t('wizard.step4NoRowsYet') : t('wizard.step4MoreRows', { count: moreRows })}
                         </Text>
                     </View>
 
@@ -2114,7 +2117,7 @@ function Step4({draft, onChange, onJumpToStep3}: {
                     }}>
                         <View style={{flexDirection: 'row', alignItems: 'center', gap: 6}}>
                             <Icon name="repeat" size={13} color={colors.mustardDk}/>
-                            <Text style={{fontFamily: fonts.body, fontSize: 12, color: colors.inkSoft}}>Repeat ×</Text>
+                            <Text style={{fontFamily: fonts.body, fontSize: 12, color: colors.inkSoft}}>{t('wizard.step4RepeatBy')}</Text>
                         </View>
                         <View style={{
                             flexDirection: 'row', alignItems: 'center',
@@ -2189,7 +2192,7 @@ function Step4({draft, onChange, onJumpToStep3}: {
                 fontFamily: fonts.mono, fontSize: 11, color: colors.inkMute,
                 letterSpacing: 2, textTransform: 'uppercase', marginBottom: 8,
             }}>
-                {part.name} · sequences in order
+                {t('wizard.step4SequencesInOrder', { name: part.name })}
             </Text>
         </View>
     )
@@ -2207,7 +2210,7 @@ function Step4({draft, onChange, onJumpToStep3}: {
             >
                 <Icon name="library" size={14} color={colors.mustardDk}/>
                 <Text style={{fontFamily: fonts.bodySb, fontSize: 13.5, color: colors.inkSoft}}>
-                    Reuse from library
+                    {t('wizard.step4ReuseFromLib')}
                 </Text>
             </Pressable>
 
@@ -2227,9 +2230,9 @@ function Step4({draft, onChange, onJumpToStep3}: {
                     <Icon name="repeat" size={18} color={colors.brick}/>
                 </View>
                 <View style={{flex: 1}}>
-                    <Text style={{fontFamily: fonts.bodySb, fontSize: 14.5, color: colors.ink}}>Loop the whole part?</Text>
+                    <Text style={{fontFamily: fonts.bodySb, fontSize: 14.5, color: colors.ink}}>{t('wizard.step4LoopTitle')}</Text>
                     <Text style={{fontFamily: fonts.body, fontSize: 12, color: colors.inkMute, marginTop: 2, lineHeight: 16}}>
-                        After the last sequence, cycle back to #1. Great for tubes & socks.
+                        {t('wizard.step4LoopSub')}
                     </Text>
                 </View>
                 <Pressable
@@ -2266,14 +2269,14 @@ function Step4({draft, onChange, onJumpToStep3}: {
                         fontFamily: fonts.mono, fontSize: 10, color: '#FBF6EC',
                         opacity: 0.7, letterSpacing: 1.6, textTransform: 'uppercase',
                     }}>
-                        {part.name} · final tally
+                        {t('wizard.step4FinalTally', { name: part.name })}
                     </Text>
                     <View style={{flexDirection: 'row', alignItems: 'baseline', gap: 8, marginTop: 4}}>
                         <Text style={{fontFamily: fonts.display, fontSize: 40, color: '#FBF6EC', lineHeight: 42}}>
                             {totalRows}
                         </Text>
                         <Text style={{fontFamily: fonts.body, fontSize: 13, color: '#FBF6EC', opacity: 0.9}}>
-                            rows total{part.loop ? ' · looping' : ''}
+                            {part.loop ? t('wizard.step4RowsTotalLooping') : t('wizard.step4RowsTotal')}
                         </Text>
                     </View>
                     {breakdown.length > 0 && (
@@ -2305,7 +2308,7 @@ function Step4({draft, onChange, onJumpToStep3}: {
                         borderRadius: 14, padding: 18, alignItems: 'center', marginBottom: 4,
                     }}>
                         <Text style={{fontFamily: fonts.body, fontSize: 13, color: colors.inkMute, textAlign: 'center'}}>
-                            No sequences yet — go back to Step 3 or reuse one from your library.
+                            {t('wizard.step4Empty')}
                         </Text>
                     </View>
                 }
@@ -2324,6 +2327,7 @@ function Step4({draft, onChange, onJumpToStep3}: {
 
 // ── Root wizard ─────────────────────────────────────────────────
 export default function SetupWizard() {
+    const { t } = useTranslation()
     const {colors, fonts, spacing, radius} = useTheme()
     const router = useRouter()
     const defaultCraft = useSettingsStore((s) => s.defaultCraft)
@@ -2345,29 +2349,21 @@ export default function SetupWizard() {
         parts: [
             {
                 id: uuid4(),
-                name: 'Main',
+                name: t('wizard.mainPart'),
                 color: PART_COLORS[0]!,
                 loop: false,
                 sequences: [
-                    {id: uuid4(), name: 'Main sequence', rows: [], totalRepeats: 1, loop: false},
+                    {id: uuid4(), name: t('wizard.mainSequence'), rows: [], totalRepeats: 1, loop: false},
                 ],
             },
         ],
     })
 
     const STEP_META = [
-        {
-            label: 'Step 1 of 4',
-            title: 'What are we making?',
-            sub: "Name it, pick your yarn and your tool — we'll remember."
-        },
-        {
-            label: 'Step 2 of 4',
-            title: 'Break it into parts.',
-            sub: 'A cardigan has a body and two sleeves. A scarf has one part. You decide.'
-        },
-        {label: 'Step 3 of 4', title: 'Plan every sequence.', sub: "Pick a part, then fill each sequence's rows. Scroll through them all."},
-        {label: 'Step 4 of 4', title: 'Arrange the part.', sub: 'Drag to order. Set repeats. Loop if it tubes.'},
+        { label: t('wizard.step1Label'), title: t('wizard.step1Title'), sub: t('wizard.step1Sub') },
+        { label: t('wizard.step2Label'), title: t('wizard.step2Title'), sub: t('wizard.step2Sub') },
+        { label: t('wizard.step3Label'), title: t('wizard.step3Title'), sub: t('wizard.step3Sub') },
+        { label: t('wizard.step4Label'), title: t('wizard.step4Title'), sub: t('wizard.step4Sub') },
     ]
 
     const blocked = step === 0 && triedNext && !draft.name.trim()
@@ -2417,7 +2413,7 @@ export default function SetupWizard() {
             {/* Header */}
             <View style={styles.headerBar}>
                 <IconBtn name="x" onPress={back}/>
-                <Text style={{fontFamily: fonts.mono, fontSize: 11, color: colors.inkMute}}>{step + 1}/4</Text>
+                <Text style={{fontFamily: fonts.mono, fontSize: 11, color: colors.inkMute}}>{t('wizard.stepCounter', { current: step + 1, total: 4 })}</Text>
             </View>
 
             <WizardSteps step={step}/>
@@ -2489,14 +2485,14 @@ export default function SetupWizard() {
                             <Text style={{fontFamily: fonts.display, fontSize: 13, color: '#FBF6EC', lineHeight: 16}}>!</Text>
                         </View>
                         <Text style={{flex: 1, fontFamily: fonts.bodySb, fontSize: 13, color: colors.brick, letterSpacing: -0.1}}>
-                            Fill the required fields to continue.
+                            {t('wizard.blocked')}
                         </Text>
                         <Icon name="chevDown" size={14} color={colors.brick}/>
                     </View>
                 )}
                 <View style={styles.footerBtns}>
                     <Btn variant="ghost" size="lg" onPress={back}>
-                        {step === 0 ? 'Cancel' : 'Back'}
+                        {step === 0 ? t('common.cancel') : t('common.back')}
                     </Btn>
                     <View style={{flex: 1}}>
                         {blocked ? (
@@ -2514,12 +2510,12 @@ export default function SetupWizard() {
                                     <Text style={{fontFamily: fonts.display, fontSize: 12, color: '#FBF6EC', lineHeight: 16}}>!</Text>
                                 </View>
                                 <Text style={{fontFamily: fonts.bodySb, fontSize: 17, color: colors.brick, letterSpacing: -0.1}}>
-                                    Next
+                                    {t('common.next')}
                                 </Text>
                             </Pressable>
                         ) : (
                             <Btn variant="primary" size="lg" icon="chevR" full onPress={next}>
-                                {step === 3 ? 'Cast on!' : step === 2 ? 'Next: Arrange' : 'Next'}
+                                {step === 3 ? t('wizard.castOn') : step === 2 ? t('wizard.nextArrange') : t('common.next')}
                             </Btn>
                         )}
                     </View>

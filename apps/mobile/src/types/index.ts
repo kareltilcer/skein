@@ -87,6 +87,7 @@ export type LibraryRow = {
 export type Settings = {
   theme: Theme
   language: string
+  languageInitialized: boolean
   defaultCraft: Craft
   holdTimeMs: number
   hasSeenWelcome: boolean

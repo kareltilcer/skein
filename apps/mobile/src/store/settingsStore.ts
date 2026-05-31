@@ -18,15 +18,16 @@ type SettingsStore = Settings & {
 export const useSettingsStore = create<SettingsStore>()(
   persist(
     (set) => ({
-      theme:            'auto',
-      language:         'en',
-      defaultCraft:     'knit',
-      holdTimeMs:       3000,
-      hasSeenWelcome:   false,
-      recentStitchIds:  [],
+      theme:               'auto',
+      language:            'en',
+      languageInitialized: false,
+      defaultCraft:        'knit',
+      holdTimeMs:          3000,
+      hasSeenWelcome:      false,
+      recentStitchIds:     [],
 
       setTheme:         (theme) => set({ theme }),
-      setLanguage:      (language) => set({ language }),
+      setLanguage:      (language) => set({ language, languageInitialized: true }),
       setDefaultCraft:  (defaultCraft) => set({ defaultCraft }),
       setHoldTimeMs:    (holdTimeMs) => set({ holdTimeMs }),
       markWelcomeSeen:  () => set({ hasSeenWelcome: true }),

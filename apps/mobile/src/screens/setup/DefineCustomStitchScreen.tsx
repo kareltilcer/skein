@@ -3,6 +3,7 @@ import {
   Modal, View, Text, Pressable, ScrollView, TextInput, StyleSheet,
 } from 'react-native'
 import { BlurView } from 'expo-blur'
+import { useTranslation } from 'react-i18next'
 import { useTheme } from '../../theme/ThemeContext'
 import { useCustomStitchStore } from '../../store/customStitchStore'
 import StitchGlyph from '../../components/StitchGlyph'
@@ -16,22 +17,22 @@ const SYMBOLS = [
   'cableL','cableR','tee','teeBar','teeBar2','fan','flower',
 ]
 
-const TILE_COLORS: { key: TileColorKey; label: string }[] = [
-  { key: 'brick',     label: 'Brick'   },
-  { key: 'mustard',   label: 'Mustard' },
-  { key: 'forest',    label: 'Forest'  },
-  { key: 'brickDk',   label: 'Maroon'  },
-  { key: 'mustardDk', label: 'Ochre'   },
-  { key: 'forestDk',  label: 'Moss'    },
+const TILE_COLOR_KEYS: { key: TileColorKey; labelKey: string }[] = [
+  { key: 'brick',     labelKey: 'customStitch.tileColorBrick'   },
+  { key: 'mustard',   labelKey: 'customStitch.tileColorMustard' },
+  { key: 'forest',    labelKey: 'customStitch.tileColorForest'  },
+  { key: 'brickDk',   labelKey: 'customStitch.tileColorBrickDk' },
+  { key: 'mustardDk', labelKey: 'customStitch.tileColorMustardDk' },
+  { key: 'forestDk',  labelKey: 'customStitch.tileColorForestDk' },
 ]
 
-const COUNTS_OPTIONS: { id: CountsAs; label: string; math: string }[] = [
-  { id: 'inc', label: 'Increase',   math: '+1 st' },
-  { id: 'one', label: 'One-to-one', math: '1 → 1' },
-  { id: 'dec', label: 'Decrease',   math: '−1 st' },
+const GROUP_KEYS: { groupId: string; labelKey: string }[] = [
+  { groupId: 'Basics',           labelKey: 'customStitch.groupBasics'    },
+  { groupId: 'Increases',        labelKey: 'customStitch.groupIncreases' },
+  { groupId: 'Decreases',        labelKey: 'customStitch.groupDecreases' },
+  { groupId: 'Cables & texture', labelKey: 'customStitch.groupCables'    },
+  { groupId: 'My customs ★',     labelKey: 'customStitch.groupMyCustoms' },
 ]
-
-const GROUPS = ['Basics', 'Increases', 'Decreases', 'Cables & texture', 'My customs ★']
 
 type Props = {
   visible: boolean
@@ -42,8 +43,15 @@ type Props = {
 }
 
 export default function DefineCustomStitchScreen({ visible, onClose, onSaved, defaultCraft = 'knit' }: Props) {
+  const { t } = useTranslation()
   const { theme, colors, fonts, radius } = useTheme()
   const { addCustomStitch } = useCustomStitchStore()
+
+  const COUNTS_OPTIONS: { id: CountsAs; label: string; math: string }[] = [
+    { id: 'inc', label: t('customStitch.countsInc'), math: t('customStitch.countsIncMath') },
+    { id: 'one', label: t('customStitch.countsOne'), math: t('customStitch.countsOneMath') },
+    { id: 'dec', label: t('customStitch.countsDec'), math: t('customStitch.countsDecMath') },
+  ]
 
   const [abbr,     setAbbr]     = useState('')
   const [name,     setName]     = useState('')
@@ -110,14 +118,14 @@ export default function DefineCustomStitchScreen({ visible, onClose, onSaved, de
                 <Text style={{
                   fontFamily: fonts.mono, fontSize: 9.5, color: colors.inkMute,
                   letterSpacing: 2, textTransform: 'uppercase',
-                }}>Custom · draft</Text>
+                }}>{t('customStitch.draft')}</Text>
               </View>
 
               <Pressable onPress={ready ? handleSave : undefined} hitSlop={12}>
                 <Text style={{
                   fontFamily: fonts.bodySb, fontSize: 14, letterSpacing: -0.1,
                   color: ready ? colors.brick : colors.inkMute,
-                }}>Save</Text>
+                }}>{t('common.save')}</Text>
               </Pressable>
             </View>
 
@@ -126,12 +134,12 @@ export default function DefineCustomStitchScreen({ visible, onClose, onSaved, de
               <Text style={{
                 fontFamily: fonts.display, fontSize: 32, color: colors.brick,
                 letterSpacing: -0.5, lineHeight: 36,
-              }}>Define a stitch</Text>
+              }}>{t('customStitch.title')}</Text>
               <Text style={{
                 fontFamily: fonts.body, fontSize: 13.5, color: colors.inkSoft,
                 lineHeight: 20, marginTop: 6,
               }}>
-                For anything not in the standard set — grandma's secret rib, your favourite bobble variation.
+                {t('customStitch.blurb')}
               </Text>
             </View>
 
@@ -162,7 +170,7 @@ export default function DefineCustomStitchScreen({ visible, onClose, onSaved, de
                     <Text style={{
                       fontFamily: fonts.mono, fontSize: 9, color: colors.ink,
                       fontWeight: '700', letterSpacing: 1.2,
-                    }}>NEW</Text>
+                    }}>{t('customStitch.newBadge')}</Text>
                   </View>
                 </View>
 
@@ -170,13 +178,13 @@ export default function DefineCustomStitchScreen({ visible, onClose, onSaved, de
                   <Text style={{
                     fontFamily: fonts.mono, fontSize: 10, color: colors.inkMute,
                     letterSpacing: 1.8, textTransform: 'uppercase',
-                  }}>Live preview</Text>
+                  }}>{t('customStitch.livePreview')}</Text>
                   <Text style={{
                     fontFamily: fonts.display, fontSize: 22, color: name ? colors.ink : colors.inkMute,
                     letterSpacing: -0.25, lineHeight: 26,
                     fontStyle: name ? 'normal' : 'italic',
                   }} numberOfLines={2}>
-                    {name || 'Untitled stitch'}
+                    {name || t('customStitch.untitledStitch')}
                   </Text>
                   <View style={{ flexDirection: 'row', gap: 6, flexWrap: 'wrap', marginTop: 2 }}>
                     <View style={[styles.previewChip, { backgroundColor: colors.cream2 }]}>
@@ -199,8 +207,8 @@ export default function DefineCustomStitchScreen({ visible, onClose, onSaved, de
               </View>
 
               {/* ─── Abbreviation & Name ── */}
-              <FormLabel colors={colors} fonts={fonts} hint="shown in charts">
-                Abbreviation &amp; name
+              <FormLabel colors={colors} fonts={fonts} hint={t('customStitch.abbrHint')}>
+                {t('customStitch.abbreviationAndName')}
               </FormLabel>
               <View style={{ flexDirection: 'row', gap: 10, marginBottom: 22 }}>
                 <View style={{ width: 100 }}>
@@ -213,8 +221,8 @@ export default function DefineCustomStitchScreen({ visible, onClose, onSaved, de
                   }]}>
                     <TextInput
                       value={abbr}
-                      onChangeText={(t) => setAbbr(t.slice(0, 8))}
-                      placeholder="fr"
+                      onChangeText={(text) => setAbbr(text.slice(0, 8))}
+                      placeholder={t('customStitch.abbrPlaceholder')}
                       placeholderTextColor={colors.inkMute}
                       autoCapitalize="none"
                       style={{
@@ -237,8 +245,8 @@ export default function DefineCustomStitchScreen({ visible, onClose, onSaved, de
                   }]}>
                     <TextInput
                       value={name}
-                      onChangeText={(t) => setName(t.slice(0, 36))}
-                      placeholder="Fisherman's rib"
+                      onChangeText={(text) => setName(text.slice(0, 36))}
+                      placeholder={t('customStitch.namePlaceholder')}
                       placeholderTextColor={colors.inkMute}
                       style={{
                         fontFamily: fonts.body, fontSize: 15, color: colors.ink,
@@ -253,11 +261,11 @@ export default function DefineCustomStitchScreen({ visible, onClose, onSaved, de
               </View>
 
               {/* ─── Craft ── */}
-              <FormLabel colors={colors} fonts={fonts}>Craft</FormLabel>
+              <FormLabel colors={colors} fonts={fonts}>{t('customStitch.craft')}</FormLabel>
               <View style={{ flexDirection: 'row', gap: 8, marginBottom: 22 }}>
                 {([
-                  { id: 'knit' as Craft, label: 'Knit', icon: 'needle' as const },
-                  { id: 'crochet' as Craft, label: 'Crochet', icon: 'loop' as const },
+                  { id: 'knit' as Craft, label: t('craft.knit'), icon: 'needle' as const },
+                  { id: 'crochet' as Craft, label: t('craft.crochet'), icon: 'loop' as const },
                 ]).map((c) => {
                   const active = craft === c.id
                   return (
@@ -283,8 +291,8 @@ export default function DefineCustomStitchScreen({ visible, onClose, onSaved, de
               </View>
 
               {/* ─── Chart symbol ── */}
-              <FormLabel colors={colors} fonts={fonts} hint={`${SYMBOLS.length} marks`}>
-                Chart symbol
+              <FormLabel colors={colors} fonts={fonts} hint={t('customStitch.marksCount', { count: SYMBOLS.length })}>
+                {t('customStitch.chartSymbol')}
               </FormLabel>
               <View style={[styles.symbolGrid, {
                 backgroundColor: colors.cream2,
@@ -321,11 +329,11 @@ export default function DefineCustomStitchScreen({ visible, onClose, onSaved, de
               </View>
 
               {/* ─── Tile color ── */}
-              <FormLabel colors={colors} fonts={fonts} hint="how it sits next to its neighbours">
-                Tile color
+              <FormLabel colors={colors} fonts={fonts} hint={t('customStitch.tileColorHint')}>
+                {t('customStitch.tileColor')}
               </FormLabel>
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginBottom: 22 }}>
-                {TILE_COLORS.map((tc) => {
+                {TILE_COLOR_KEYS.map((tc) => {
                   const active = tileKey === tc.key
                   const c = colors[tc.key]
                   return (
@@ -357,15 +365,15 @@ export default function DefineCustomStitchScreen({ visible, onClose, onSaved, de
                         color: active ? colors.ink : colors.inkMute,
                         fontWeight: active ? '700' : '500',
                         letterSpacing: 0.8, textTransform: 'lowercase',
-                      }}>{tc.label}</Text>
+                      }}>{t(tc.labelKey)}</Text>
                     </Pressable>
                   )
                 })}
               </View>
 
               {/* ─── Counts as ── */}
-              <FormLabel colors={colors} fonts={fonts} hint="affects row totals">
-                Counts as
+              <FormLabel colors={colors} fonts={fonts} hint={t('customStitch.countsAsHint')}>
+                {t('customStitch.countsAs')}
               </FormLabel>
               <View style={[styles.countsGrid, {
                 backgroundColor: colors.cream2,
@@ -405,8 +413,8 @@ export default function DefineCustomStitchScreen({ visible, onClose, onSaved, de
               </View>
 
               {/* ─── How to work it (notation) ── */}
-              <FormLabel colors={colors} fonts={fonts} hint="optional · for your memory">
-                How to work it
+              <FormLabel colors={colors} fonts={fonts} hint={t('customStitch.howToWorkHint')}>
+                {t('customStitch.howToWork')}
               </FormLabel>
               <View style={[styles.field, styles.notationField, {
                 backgroundColor: colors.card,
@@ -416,8 +424,8 @@ export default function DefineCustomStitchScreen({ visible, onClose, onSaved, de
               }]}>
                 <TextInput
                   value={notation}
-                  onChangeText={(t) => setNotation(t.slice(0, 240))}
-                  placeholder="A line or two on how to make this stitch — needle position, yarn-over direction, anything that'll save Future-You a Google."
+                  onChangeText={(text) => setNotation(text.slice(0, 240))}
+                  placeholder={t('customStitch.notationPlaceholder')}
                   placeholderTextColor={colors.inkMute}
                   multiline
                   style={{
@@ -428,7 +436,7 @@ export default function DefineCustomStitchScreen({ visible, onClose, onSaved, de
               </View>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 22 }}>
                 <Text style={{ fontFamily: fonts.mono, fontSize: 10, color: colors.inkMute }}>
-                  Markdown is fine.
+                  {t('customStitch.markdownNote')}
                 </Text>
                 <Text style={{ fontFamily: fonts.mono, fontSize: 10, color: colors.inkMute }}>
                   {notation.length}/240
@@ -436,14 +444,14 @@ export default function DefineCustomStitchScreen({ visible, onClose, onSaved, de
               </View>
 
               {/* ─── File under (group) ── */}
-              <FormLabel colors={colors} fonts={fonts} hint="optional">File under</FormLabel>
+              <FormLabel colors={colors} fonts={fonts} hint={t('customStitch.fileUnderHint')}>{t('customStitch.fileUnder')}</FormLabel>
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 28 }}>
-                {GROUPS.map((g) => {
-                  const active = group === g
+                {GROUP_KEYS.map((g) => {
+                  const active = group === g.groupId
                   return (
                     <Pressable
-                      key={g}
-                      onPress={() => setGroup(g)}
+                      key={g.groupId}
+                      onPress={() => setGroup(g.groupId)}
                       style={[styles.groupChip, {
                         backgroundColor: active ? colors.mustard : colors.card,
                         borderColor: active ? 'transparent' : colors.rule,
@@ -453,7 +461,7 @@ export default function DefineCustomStitchScreen({ visible, onClose, onSaved, de
                       <Text style={{
                         fontFamily: fonts.bodySb, fontSize: 12.5,
                         color: active ? colors.ink : colors.inkSoft,
-                      }}>{g}</Text>
+                      }}>{t(g.labelKey)}</Text>
                     </Pressable>
                   )
                 })}
@@ -464,17 +472,17 @@ export default function DefineCustomStitchScreen({ visible, onClose, onSaved, de
                 textAlign: 'center', fontFamily: fonts.mono, fontSize: 10,
                 color: colors.inkMute, letterSpacing: 2.5, textTransform: 'uppercase',
                 marginBottom: 8,
-              }}>✻ one of one, just yours ✻</Text>
+              }}>{t('customStitch.signoff')}</Text>
 
             </ScrollView>
 
             {/* ─── Footer save bar ─────────────────────────────── */}
             <View style={[styles.footer, { borderTopColor: colors.rule, backgroundColor: colors.bg }]}>
-              <Btn variant="ghost" size="lg" onPress={handleClose}>Cancel</Btn>
+              <Btn variant="ghost" size="lg" onPress={handleClose}>{t('common.cancel')}</Btn>
               <View style={{ flex: 1 }}>
                 {ready ? (
                   <Btn variant="primary" size="lg" icon="save" full onPress={handleSave}>
-                    Save stitch
+                    {t('customStitch.saveStitch')}
                   </Btn>
                 ) : (
                   <View style={[styles.disabledSaveBtn, {
@@ -486,7 +494,7 @@ export default function DefineCustomStitchScreen({ visible, onClose, onSaved, de
                     <Text style={{
                       fontFamily: fonts.bodySb, fontSize: 16, color: colors.brick,
                       letterSpacing: -0.25,
-                    }}>Name &amp; abbreviation first</Text>
+                    }}>{t('customStitch.nameAbbrFirst')}</Text>
                   </View>
                 )}
               </View>

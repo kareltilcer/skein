@@ -2,18 +2,16 @@ import React, { useState } from 'react'
 import { View, Text, ScrollView, Pressable, StyleSheet, Share } from 'react-native'
 
 import { LinearGradient } from 'expo-linear-gradient'
+import { useRouter } from 'expo-router'
+import { useTranslation } from 'react-i18next'
 import { useTheme } from '../theme/ThemeContext'
 import { useSettingsStore } from '../store/settingsStore'
 import { lightColors, darkColors } from '../tokens/colors'
+import { languageLabel } from '../i18n/languages'
 import Screen from '../components/ui/Screen'
 import AppBar from '../components/ui/AppBar'
 import Icon from '../components/ui/Icon'
 import type { Theme, Craft } from '../types'
-
-const LANGUAGE_NAMES: Record<string, string> = {
-  en: 'English (US)', es: 'Español', fr: 'Français', de: 'Deutsch',
-  it: 'Italiano', pt: 'Português', ja: '日本語', nl: 'Nederlands',
-}
 
 function SectionLabel({ children }: { children: string }) {
   const { colors, fonts } = useTheme()
@@ -25,12 +23,13 @@ function SectionLabel({ children }: { children: string }) {
 }
 
 function ThemeCard({ mode, active, onPress }: { mode: Theme; active: boolean; onPress: () => void }) {
+  const { t } = useTranslation()
   const { colors, fonts, radius } = useTheme()
   const isAuto = mode === 'auto'
   const isDark = mode === 'dark'
   const swatch = isDark ? darkColors.bg : lightColors.bg
   const accent = isDark ? darkColors.brick : lightColors.brick
-  const label  = isAuto ? 'Auto' : isDark ? 'Dark' : 'Light'
+  const label  = isAuto ? t('settings.themeAuto') : isDark ? t('settings.themeDark') : t('settings.themeLight')
   return (
     <Pressable
       onPress={onPress}
@@ -89,7 +88,7 @@ function ThemeCard({ mode, active, onPress }: { mode: Theme; active: boolean; on
       </Text>
       {isAuto && (
         <Text style={{ fontFamily: fonts.mono, fontSize: 8.5, color: colors.inkMute, letterSpacing: 0.8, textTransform: 'uppercase', marginTop: 2 }}>
-          Matches OS
+          {t('settings.themeAutoNote')}
         </Text>
       )}
     </Pressable>
@@ -162,16 +161,16 @@ function HoldTimeChips({ value, onChange }: { value: number; onChange: (ms: numb
   )
 }
 
-const CRAFT_OPTIONS: { id: Craft; label: string; icon: 'needle' | 'loop' }[] = [
-  { id: 'knit',    label: 'Knit',    icon: 'needle' },
-  { id: 'crochet', label: 'Crochet', icon: 'loop'   },
-]
-
 function CraftChips({ value, onChange }: { value: Craft; onChange: (c: Craft) => void }) {
+  const { t } = useTranslation()
   const { colors, fonts, radius } = useTheme()
+  const options: { id: Craft; label: string; icon: 'needle' | 'loop' }[] = [
+    { id: 'knit',    label: t('craft.knit'),    icon: 'needle' },
+    { id: 'crochet', label: t('craft.crochet'), icon: 'loop'   },
+  ]
   return (
     <View style={[styles.chipRow, { backgroundColor: colors.card, borderColor: colors.rule, borderRadius: radius.md }]}>
-      {CRAFT_OPTIONS.map((opt) => {
+      {options.map((opt) => {
         const active = opt.id === value
         return (
           <Pressable
@@ -215,18 +214,9 @@ function MiniRow({ icon, label, accent, last, onPress }: { icon: string; label: 
   )
 }
 
-async function shareSkein() {
-  try {
-    await Share.share({
-      title: 'Skein — a cozy knitting companion',
-      message: "I've been using Skein to track my knitting & crochet projects — thought you might like it too. 🧶",
-    })
-  } catch {
-    // user cancelled or share unavailable — nothing to do
-  }
-}
-
 export default function SettingsScreen() {
+  const { t } = useTranslation()
+  const router = useRouter()
   const { colors, fonts, fontSize, spacing, radius } = useTheme()
   const theme         = useSettingsStore((s) => s.theme)
   const language      = useSettingsStore((s) => s.language)
@@ -238,14 +228,25 @@ export default function SettingsScreen() {
   const [holdOpen, setHoldOpen]   = useState(false)
   const [craftOpen, setCraftOpen] = useState(false)
 
+  const shareSkein = async () => {
+    try {
+      await Share.share({
+        title: t('settings.shareTitle'),
+        message: t('settings.shareMessage'),
+      })
+    } catch {
+      // user cancelled or share unavailable — nothing to do
+    }
+  }
+
   return (
     <Screen>
-      <AppBar big title="Settings" sub="The cozy customization corner."/>
+      <AppBar big title={t('settings.title')} sub={t('settings.sub')}/>
       <ScrollView contentContainerStyle={{ padding: spacing[5], gap: spacing[5], paddingBottom: 100 }}>
 
         {/* Appearance */}
         <View>
-          <SectionLabel>Appearance</SectionLabel>
+          <SectionLabel>{t('settings.appearance')}</SectionLabel>
           <View style={styles.themeRow}>
             <ThemeCard mode="light" active={theme === 'light'} onPress={() => setTheme('light')}/>
             <ThemeCard mode="dark"  active={theme === 'dark'}  onPress={() => setTheme('dark')}/>
@@ -254,19 +255,25 @@ export default function SettingsScreen() {
           <View style={[styles.infoCard, { backgroundColor: colors.card, borderColor: colors.rule, borderRadius: radius.md, marginTop: spacing[2] }]}>
             <Icon name="bulb" size={16} color={colors.mustardDk}/>
             <Text style={{ flex: 1, fontFamily: fonts.body, fontSize: 12.5, color: colors.inkSoft, lineHeight: 18 }}>
-              <Text style={{ color: colors.ink, fontWeight: '700' }}>Auto</Text> follows your phone's system setting — light by day, dark at night. <Text style={{ color: colors.ink, fontWeight: '700' }}>Dark mode</Text> shifts everything to a deep warm red so your eyes stay relaxed during late-night knit-alongs.
+              <Text style={{ color: colors.ink, fontWeight: '700' }}>{t('settings.themeBlurbAuto')}</Text>{t('settings.themeBlurbMid')}<Text style={{ color: colors.ink, fontWeight: '700' }}>{t('settings.themeBlurbDark')}</Text>{t('settings.themeBlurbTail')}
             </Text>
           </View>
         </View>
 
         {/* Settings rows */}
         <View style={{ gap: spacing[2] }}>
-          <SettingsRow icon="globe"  iconColor={colors.forest}    title="Language"             value={LANGUAGE_NAMES[language] ?? 'English (US)'}/>
+          <SettingsRow
+            icon="globe"
+            iconColor={colors.forest}
+            title={t('settings.language')}
+            value={languageLabel(language)}
+            onPress={() => router.push('/settings/language')}
+          />
           <SettingsRow
             icon="needle"
             iconColor={colors.brick}
-            title="Default craft"
-            value={defaultCraft === 'knit' ? 'Knit' : 'Crochet'}
+            title={t('settings.defaultCraft')}
+            value={defaultCraft === 'knit' ? t('craft.knit') : t('craft.crochet')}
             expanded={craftOpen}
             onPress={() => setCraftOpen((v) => !v)}
           />
@@ -274,8 +281,8 @@ export default function SettingsScreen() {
           <SettingsRow
             icon="bulb"
             iconColor={colors.mustardDk}
-            title="Hold time to advance"
-            value={`${(holdTimeMs / 1000).toFixed(1)} seconds`}
+            title={t('settings.holdTimeToAdvance')}
+            value={t('common.secondsLong', { seconds: (holdTimeMs / 1000).toFixed(1) })}
             expanded={holdOpen}
             onPress={() => setHoldOpen((v) => !v)}
           />
@@ -292,36 +299,26 @@ export default function SettingsScreen() {
               <Icon name="cloud" size={22} color="#FBF6EC"/>
             </View>
             <View>
-              <Text style={{ fontFamily: fonts.display, fontSize: fontSize.xl, color: colors.brick }}>Cloud backup</Text>
-              <Text style={{ fontFamily: fonts.mono, fontSize: 11, color: colors.inkMute, letterSpacing: 0.5 }}>Totally optional. Always.</Text>
+              <Text style={{ fontFamily: fonts.display, fontSize: fontSize.xl, color: colors.brick }}>{t('settings.cloudTitle')}</Text>
+              <Text style={{ fontFamily: fonts.mono, fontSize: 11, color: colors.inkMute, letterSpacing: 0.5 }}>{t('settings.cloudSub')}</Text>
             </View>
           </View>
-          {/*<Text style={{ fontFamily: fonts.body, fontSize: 13, color: colors.inkSoft, lineHeight: 19, marginBottom: spacing[4] }}>*/}
-          {/*  Add an account to sync projects across devices and back up your pattern library. We won't pester you.*/}
-          {/*</Text>*/}
-          {/*<Btn variant="mustard" size="md" full>Create account</Btn>*/}
-          {/*<Text style={{ fontFamily: fonts.body, fontSize: 12, color: colors.inkSoft, textAlign: 'center', marginTop: spacing[2] }}>*/}
-          {/*  already have one? <Text style={{ color: colors.brick, fontWeight: '700' }}>Sign in</Text>*/}
-          {/*</Text>*/}
           <Text style={{ fontFamily: fonts.body, fontSize: 13, color: colors.inkSoft, lineHeight: 19 }}>
-            Still on the needles — cross-device sync and cloud backup is coming in a future updates. For now, your projects stay snug right here on this device.
+            {t('settings.cloudBody')}
           </Text>
         </LinearGradient>
 
         {/* More */}
         <View>
-          <SectionLabel>More</SectionLabel>
+          <SectionLabel>{t('settings.more')}</SectionLabel>
           <View style={[styles.moreGroup, { backgroundColor: colors.card, borderColor: colors.rule, borderRadius: radius.md }]}>
-            {/*<MiniRow icon="save"    label="Export pattern as PDF"/>*/}
-            {/*<MiniRow icon="sparkle" label="Skein Pro · ad-free forever" accent={colors.mustardDk}/>*/}
-            <MiniRow icon="user"    label="Tell a friend (please?)" onPress={shareSkein}/>
-            {/*<MiniRow icon="book"    label="The little knitting glossary" last/>*/}
+            <MiniRow icon="user" label={t('settings.tellAFriend')} onPress={shareSkein}/>
           </View>
         </View>
 
         {/* Footer */}
         <Text style={{ fontFamily: fonts.mono, fontSize: 10, color: colors.inkMute, letterSpacing: 2, textTransform: 'uppercase', textAlign: 'center', marginTop: spacing[2] }}>
-          Skein 1.0 · made with yarn {'&'} code
+          {t('settings.footer')}
         </Text>
       </ScrollView>
     </Screen>

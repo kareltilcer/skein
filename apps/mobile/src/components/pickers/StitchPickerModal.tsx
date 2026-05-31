@@ -4,6 +4,7 @@ import {
   useWindowDimensions,
 } from 'react-native'
 import { BlurView } from 'expo-blur'
+import { useTranslation } from 'react-i18next'
 import { useTheme } from '../../theme/ThemeContext'
 import {
   STITCHES, STITCH_MAP, PICKER_FILTER_CHIPS,
@@ -30,9 +31,30 @@ type Props = {
   craftFilter?: Craft
 }
 
+const FILTER_LABEL_KEYS: Record<string, string> = {
+  all:       'pickerStitch.filterAll',
+  knit:      'pickerStitch.filterKnit',
+  crochet:   'pickerStitch.filterCrochet',
+  increases: 'pickerStitch.filterIncreases',
+  decreases: 'pickerStitch.filterDecreases',
+  cables:    'pickerStitch.filterCables',
+  custom:    'pickerStitch.filterCustom',
+}
+
+const GROUP_LABEL_KEYS: Record<string, string> = {
+  basics_k:  'pickerStitch.groupKnitBasics',
+  inc_k:     'pickerStitch.groupKnitIncreases',
+  dec_k:     'pickerStitch.groupKnitDecreases',
+  cab_k:     'pickerStitch.groupKnitCables',
+  basics_c:  'pickerStitch.groupCrochetBasics',
+  dec_c:     'pickerStitch.groupCrochetDecreases',
+  special_c: 'pickerStitch.groupCrochetSpecial',
+}
+
 export default function StitchPickerModal({
   visible, onClose, onSelect, onDefineCustom, craftFilter,
 }: Props) {
+  const { t } = useTranslation()
   const { colors, fonts, radius } = useTheme()
   const { customStitches, addCustomStitch } = useCustomStitchStore()
   const { width: screenWidth, height: screenHeight } = useWindowDimensions()
@@ -154,12 +176,12 @@ export default function StitchPickerModal({
                   <Text style={{
                     fontFamily: fonts.display, fontSize: 24, color: colors.brick,
                     letterSpacing: -0.25,
-                  }}>Pick a stitch</Text>
+                  }}>{t('pickerStitch.title')}</Text>
                   <Text style={{
                     fontFamily: fonts.mono, fontSize: 10, color: colors.inkMute,
                     letterSpacing: 1.0, textTransform: 'uppercase', marginTop: 2,
                   }}>
-                    Tap to add · {totalCount} predefined + custom
+                    {t('pickerStitch.sub', { count: totalCount })}
                   </Text>
                 </View>
                 {/* Plain X icon — no circular button, per design */}
@@ -189,7 +211,7 @@ export default function StitchPickerModal({
                         fontFamily: fonts.bodySb, fontSize: 12,
                         color: active ? '#FBF6EC' : colors.inkSoft,
                       }}>
-                        {f.label}
+                        {FILTER_LABEL_KEYS[f.id] ? t(FILTER_LABEL_KEYS[f.id]!) : f.label}
                       </Text>
                     </Pressable>
                   )
@@ -212,12 +234,12 @@ export default function StitchPickerModal({
                   <Text style={{
                     fontFamily: fonts.display, fontSize: 20, color: colors.brick,
                     letterSpacing: -0.2,
-                  }}>Roll your own.</Text>
+                  }}>{t('pickerStitch.customPanelTitle')}</Text>
                   <Text style={{
                     fontFamily: fonts.body, fontSize: 13, color: colors.inkSoft,
                     lineHeight: 19,
                   }}>
-                    Got a stitch that's not in the list — bobble pattern, fisherman's rib variation, your grandma's secret? Define it here.
+                    {t('pickerStitch.customPanelBody')}
                   </Text>
 
                   {/* Abbr + Name row */}
@@ -227,8 +249,8 @@ export default function StitchPickerModal({
                     }]}>
                       <TextInput
                         value={panelAbbr}
-                        onChangeText={(t) => setPanelAbbr(t.slice(0, 8))}
-                        placeholder={'Abbreviation (e.g. “fr”)'}
+                        onChangeText={(text) => setPanelAbbr(text.slice(0, 8))}
+                        placeholder={t('pickerStitch.abbrPlaceholder')}
                         placeholderTextColor={colors.inkMute}
                         autoCapitalize="none"
                         style={{ fontFamily: fonts.mono, fontSize: 13, color: colors.ink }}
@@ -239,8 +261,8 @@ export default function StitchPickerModal({
                     }]}>
                       <TextInput
                         value={panelName}
-                        onChangeText={(t) => setPanelName(t.slice(0, 36))}
-                        placeholder={"Name (e.g. Fisherman's rib)"}
+                        onChangeText={(text) => setPanelName(text.slice(0, 36))}
+                        placeholder={t('pickerStitch.namePlaceholder')}
                         placeholderTextColor={colors.inkMute}
                         style={{ fontFamily: fonts.mono, fontSize: 13, color: colors.ink }}
                       />
@@ -251,7 +273,7 @@ export default function StitchPickerModal({
                   <Text style={{
                     fontFamily: fonts.mono, fontSize: 10, color: colors.inkMute,
                     letterSpacing: 1.0, textTransform: 'uppercase',
-                  }}>Symbol</Text>
+                  }}>{t('pickerStitch.symbolLabel')}</Text>
 
                   {/* 8-symbol row */}
                   <View style={{ flexDirection: 'row', gap: 6, flexWrap: 'wrap' }}>
@@ -285,7 +307,7 @@ export default function StitchPickerModal({
                     onPress={handlePanelSave}
                     disabled={!panelAbbr.trim() || !panelName.trim()}
                   >
-                    Save custom stitch
+                    {t('pickerStitch.saveCustomStitch')}
                   </Btn>
                 </View>
               ) : (
@@ -299,7 +321,7 @@ export default function StitchPickerModal({
                           fontFamily: fonts.mono, fontSize: 10, color: colors.inkMute,
                           letterSpacing: 1.8, textTransform: 'uppercase',
                         }}>
-                          {g.label}
+                          {GROUP_LABEL_KEYS[g.id] ? t(GROUP_LABEL_KEYS[g.id]!) : g.label}
                         </Text>
                         <Text style={{
                           fontFamily: fonts.mono, fontSize: 10, color: colors.inkMute,
@@ -352,7 +374,7 @@ export default function StitchPickerModal({
                   >
                     <Icon name="plus" size={14} color={colors.brick}/>
                     <Text style={{ fontFamily: fonts.bodySb, fontSize: 13, color: colors.brick }}>
-                      Define a custom stitch
+                      {t('pickerStitch.defineCustomStitch')}
                     </Text>
                   </Pressable>
                 </>

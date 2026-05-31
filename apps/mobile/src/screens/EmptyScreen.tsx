@@ -4,23 +4,14 @@ import {
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useRouter } from 'expo-router'
+import { useTranslation } from 'react-i18next'
 import Svg, { Circle, Path } from 'react-native-svg'
 import { useTheme } from '../theme/ThemeContext'
 import { useSettingsStore } from '../store/settingsStore'
+import { SUPPORTED_LANGUAGES, isSupportedLanguage } from '../i18n/languages'
 import Btn from '../components/ui/Btn'
 import Icon from '../components/ui/Icon'
 import IconBtn from '../components/ui/IconBtn'
-
-const LANGUAGES = [
-  { code: 'en', name: 'English',    welcome: 'Welcome to Skein.',        body: "Build a pattern, hit start, and we'll keep your place — row by row, repeat by repeat. Both hands free for the needles.",                 cta: 'Cast on first project',  alt: 'Peek at the library',   note: 'no account needed · ever'    },
-  { code: 'es', name: 'Español',    welcome: 'Bienvenida a Skein.',       body: 'Crea un patrón, dale a empezar, y nosotros guardamos tu lugar — fila por fila, repetición por repetición.',                             cta: 'Empezar primer proyecto',alt: 'Ver la biblioteca',     note: 'sin cuenta · nunca'          },
-  { code: 'fr', name: 'Français',   welcome: 'Bienvenue sur Skein.',      body: "Crée un motif, lance la séance, et nous gardons ta place — rang par rang, répétition par répétition.",                                   cta: 'Démarrer un projet',     alt: 'Voir la bibliothèque',  note: 'aucun compte requis · jamais'},
-  { code: 'de', name: 'Deutsch',    welcome: 'Willkommen bei Skein.',     body: 'Bau ein Muster, leg los, und wir merken uns deine Stelle — Reihe für Reihe, Wiederholung für Wiederholung.',                             cta: 'Erstes Projekt starten', alt: 'Bibliothek ansehen',    note: 'kein konto nötig · niemals'  },
-  { code: 'it', name: 'Italiano',   welcome: 'Benvenuta in Skein.',       body: 'Crea un motivo, parti, e teniamo noi il segno — riga per riga, ripetizione per ripetizione.',                                            cta: 'Avvia primo progetto',   alt: 'Sfoglia la libreria',   note: 'nessun account · mai'        },
-  { code: 'pt', name: 'Português',  welcome: 'Olá, é o Skein.',           body: 'Cria um padrão, começa, e nós guardamos o teu lugar — linha a linha, repetição a repetição.',                                           cta: 'Começar projeto',        alt: 'Ver biblioteca',        note: 'sem conta · nunca'           },
-  { code: 'ja', name: '日本語',      welcome: 'Skeinへようこそ。',           body: 'パターンを作って、始めるだけ。あとは段ごと・くり返しごとに進行を覚えています。',                                                                   cta: '最初のプロジェクト',     alt: 'ライブラリを見る',       note: 'アカウント不要・ずっと'       },
-  { code: 'nl', name: 'Nederlands', welcome: 'Welkom bij Skein.',         body: 'Bouw een patroon, druk op start, en wij houden je plek bij — rij voor rij, herhaling voor herhaling.',                                  cta: 'Eerste project starten', alt: 'Bekijk de bibliotheek', note: 'geen account nodig · ooit'   },
-]
 
 function SkeinLogo({ size = 120, fg = '#9C3D2E', accent = '#D4923B' }) {
   return (
@@ -37,6 +28,7 @@ function SkeinLogo({ size = 120, fg = '#9C3D2E', accent = '#D4923B' }) {
 }
 
 export default function EmptyScreen() {
+  const { t } = useTranslation()
   const { colors, fonts, fontSize, spacing } = useTheme()
   const router = useRouter()
   const setLanguage = useSettingsStore((s) => s.setLanguage)
@@ -44,21 +36,17 @@ export default function EmptyScreen() {
   const savedLang = useSettingsStore((s) => s.language)
 
   const [langOpen, setLangOpen] = useState(false)
-  const [code, setCode] = useState(savedLang ?? 'en')
-  const L = LANGUAGES.find((l) => l.code === code) ?? LANGUAGES[0]!
+  const code = isSupportedLanguage(savedLang) ? savedLang : 'en'
 
   const goSetup = () => {
     markWelcomeSeen()
-    setLanguage(code)
     router.push('/setup')
   }
   const goLibrary = () => {
     markWelcomeSeen()
-    setLanguage(code)
     router.replace('/(tabs)/library')
   }
   const pickLang = (c: string) => {
-    setCode(c)
     setLanguage(c)
     setLangOpen(false)
   }
@@ -85,27 +73,27 @@ export default function EmptyScreen() {
         <SkeinLogo size={120} fg={colors.brick} accent={colors.mustard}/>
 
         <Text style={[styles.welcome, { fontFamily: fonts.display, color: colors.brick, marginTop: spacing[7] }]}>
-          {L.welcome}
+          {t('welcome.greeting')}
         </Text>
         <Text style={{ fontFamily: fonts.display, fontSize: fontSize.md, color: colors.mustardDk, marginTop: 10, letterSpacing: 1.5 }}>
-          stitch happens.
+          {t('welcome.tagline')}
         </Text>
         <Text style={[styles.body, { fontFamily: fonts.body, color: colors.inkSoft }]}>
-          {L.body}
+          {t('welcome.body')}
         </Text>
 
         <View style={[styles.ctaGroup, { marginTop: spacing[8] }]}>
           <Btn variant="primary" size="lg" icon="plus" full onPress={goSetup}>
-            {L.cta}
+            {t('welcome.ctaCastOn')}
           </Btn>
           <View style={{ height: spacing[2] }}/>
           <Btn variant="ghost" size="md" icon="book" full onPress={goLibrary}>
-            {L.alt}
+            {t('welcome.ctaLibrary')}
           </Btn>
         </View>
 
         <Text style={{ fontFamily: fonts.mono, fontSize: 11, color: colors.inkMute, letterSpacing: 1.5, textTransform: 'uppercase', marginTop: spacing[8] }}>
-          {L.note}
+          {t('welcome.note')}
         </Text>
       </View>
 
@@ -114,10 +102,10 @@ export default function EmptyScreen() {
         <Pressable style={styles.backdrop} onPress={() => setLangOpen(false)}/>
         <View style={[styles.langSheet, { backgroundColor: colors.card, borderColor: colors.rule }]}>
           <Text style={{ fontFamily: fonts.mono, fontSize: 10, color: colors.inkMute, letterSpacing: 3, textTransform: 'uppercase', padding: 12 }}>
-            Choose your language
+            {t('welcome.languageModalTitle')}
           </Text>
           <ScrollView>
-            {LANGUAGES.map((l) => {
+            {SUPPORTED_LANGUAGES.map((l) => {
               const active = l.code === code
               return (
                 <Pressable
@@ -132,14 +120,14 @@ export default function EmptyScreen() {
                     {l.code}
                   </Text>
                   <Text style={{ flex: 1, fontFamily: fonts.body, fontSize: 14, color: colors.ink, fontWeight: active ? '700' : '500' }}>
-                    {l.name}
+                    {l.native}
                   </Text>
                   {active ? <Icon name="check" size={16} color={colors.brick}/> : null}
                 </Pressable>
               )
             })}
             <Text style={{ fontFamily: fonts.mono, fontSize: 10, color: colors.inkMute, padding: 12, borderTopWidth: 1, borderTopColor: colors.rule }}>
-              You can switch anytime in Settings.
+              {t('welcome.languageSwitchHint')}
             </Text>
           </ScrollView>
         </View>

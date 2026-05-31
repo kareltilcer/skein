@@ -4,6 +4,7 @@ import {
   useWindowDimensions,
 } from 'react-native'
 import { BlurView } from 'expo-blur'
+import { useTranslation } from 'react-i18next'
 import { useTheme } from '../../theme/ThemeContext'
 import { STITCH_MAP } from '../../tokens/stitches'
 import { useLibraryStore } from '../../store/libraryStore'
@@ -31,6 +32,7 @@ type Props = {
 export default function SeqPickerModal({
   visible, onClose, onSelectSequence, onSelectPattern, onBuildNew, craftFilter,
 }: Props) {
+  const { t } = useTranslation()
   const { colors, fonts, radius } = useTheme()
   const { height: screenHeight } = useWindowDimensions()
 
@@ -63,33 +65,37 @@ export default function SeqPickerModal({
   }, [patterns, craft])
 
   // Empty-state card shared by both sequence and pattern lists
-  const renderNoMatches = (kind: 'sequences' | 'patterns') => (
-    <View style={[styles.noMatchCard, {
-      backgroundColor: colors.card,
-      borderColor: colors.rule,
-    }]}>
-      <Text style={{
-        fontFamily: fonts.body, fontSize: 13.5, color: colors.inkSoft,
-        textAlign: 'center',
-      }}>
-        {craft !== 'all' ? (
-          <>
-            {'No '}
-            <Text style={{ color: colors.brick, fontFamily: fonts.bodySb }}>
-              {craft}
-            </Text>
-            {` ${kind} match this filter.`}
-          </>
-        ) : `No ${kind} in your library yet.`}
-      </Text>
-      <Text style={{
-        fontFamily: fonts.mono, fontSize: 11, color: colors.inkMute,
-        marginTop: 6, textAlign: 'center',
-      }}>
-        {craft !== 'all' ? 'Try "All" or roll a new one.' : 'Roll one below.'}
-      </Text>
-    </View>
-  )
+  const renderNoMatches = (kind: 'sequences' | 'patterns') => {
+    const suffix = kind === 'sequences' ? t('pickerSeq.noMatchSuffixSequences') : t('pickerSeq.noMatchSuffixPatterns')
+    const empty = kind === 'sequences' ? t('pickerSeq.noLibrarySequences') : t('pickerSeq.noLibraryPatterns')
+    return (
+      <View style={[styles.noMatchCard, {
+        backgroundColor: colors.card,
+        borderColor: colors.rule,
+      }]}>
+        <Text style={{
+          fontFamily: fonts.body, fontSize: 13.5, color: colors.inkSoft,
+          textAlign: 'center',
+        }}>
+          {craft !== 'all' ? (
+            <>
+              {t('pickerSeq.noMatchPrefix')}
+              <Text style={{ color: colors.brick, fontFamily: fonts.bodySb }}>
+                {t(`craft.${craft}`)}
+              </Text>
+              {suffix}
+            </>
+          ) : empty}
+        </Text>
+        <Text style={{
+          fontFamily: fonts.mono, fontSize: 11, color: colors.inkMute,
+          marginTop: 6, textAlign: 'center',
+        }}>
+          {craft !== 'all' ? t('pickerSeq.tryAll') : t('pickerSeq.rollOneBelow')}
+        </Text>
+      </View>
+    )
+  }
 
   // Three-tone color cycling — brick / mustard / forest
   const tileColor = (i: number) =>
@@ -145,15 +151,15 @@ export default function SeqPickerModal({
                     fontFamily: fonts.display, fontSize: 24, color: colors.brick,
                     letterSpacing: -0.25, lineHeight: 24,
                   }}>
-                    Add from library
+                    {t('pickerSeq.title')}
                   </Text>
                   <Text style={{
                     fontFamily: fonts.mono, fontSize: 10, color: colors.inkMute,
                     letterSpacing: 1.0, textTransform: 'uppercase', marginTop: 6,
                   }}>
                     {mode === 'sequence'
-                      ? `Skip the rebuild · ${sequences.length} sequences saved`
-                      : `Skip the rebuild · ${patterns.length} patterns saved`}
+                      ? t('pickerSeq.subSequence', { count: sequences.length })
+                      : t('pickerSeq.subPattern', { count: patterns.length })}
                   </Text>
                 </View>
                 <Pressable onPress={onClose} hitSlop={12}>
@@ -164,8 +170,8 @@ export default function SeqPickerModal({
               {/* Mode toggle */}
               <View style={[styles.modeToggle, { backgroundColor: colors.cream2 }]}>
                 {([
-                  { id: 'sequence' as Mode, label: 'Sequence', sub: 'one block',      count: sequences.length },
-                  { id: 'pattern'  as Mode, label: 'Pattern',  sub: 'several at once', count: patterns.length  },
+                  { id: 'sequence' as Mode, label: t('pickerSeq.modeSequence'), sub: t('pickerSeq.modeSequenceSub'), count: sequences.length },
+                  { id: 'pattern'  as Mode, label: t('pickerSeq.modePattern'),  sub: t('pickerSeq.modePatternSub'),  count: patterns.length  },
                 ]).map(m => {
                   const active = mode === m.id
                   return (
@@ -214,9 +220,9 @@ export default function SeqPickerModal({
               {/* Craft filter pills */}
               <View style={[styles.craftRow, { marginTop: 12 }]}>
                 {([
-                  { id: 'all',     label: 'All',     icon: null       },
-                  { id: 'knit',    label: 'Knit',    icon: 'needle'   },
-                  { id: 'crochet', label: 'Crochet', icon: 'loop'     },
+                  { id: 'all',     label: t('craft.all'),     icon: null       },
+                  { id: 'knit',    label: t('craft.knit'),    icon: 'needle'   },
+                  { id: 'crochet', label: t('craft.crochet'), icon: 'loop'     },
                 ] as const).map(c => {
                   const active = craft === c.id
                   return (
@@ -304,7 +310,7 @@ export default function SeqPickerModal({
                               fontFamily: fonts.mono, fontSize: 11,
                               color: colors.inkMute, marginTop: 2,
                             }}>
-                              {seq.rows.length} {seq.rows.length === 1 ? 'row' : 'rows'} · {seq.craft}
+                              {t('pickerSeq.tileMeta', { count: seq.rows.length, craft: t(`craft.${seq.craft}`) })}
                             </Text>
                           </View>
 
@@ -375,8 +381,7 @@ export default function SeqPickerModal({
                                 fontFamily: fonts.mono, fontSize: 11,
                                 color: colors.inkMute, marginTop: 2,
                               }}>
-                                {pat.sequenceIds.length}{' '}
-                                {pat.sequenceIds.length === 1 ? 'sequence' : 'sequences'} · {pat.craft}
+                                {t('pickerSeq.patternTileMeta', { count: pat.sequenceIds.length, craft: t(`craft.${pat.craft}`) })}
                               </Text>
                             </View>
 
@@ -408,7 +413,7 @@ export default function SeqPickerModal({
                                     fontFamily: fonts.mono, fontSize: 9.5,
                                     color: colors.inkMute, fontWeight: '600',
                                   }}>
-                                    + {overflow} more
+                                    {t('pickerSeq.moreItems', { count: overflow })}
                                   </Text>
                                 </View>
                               )}
@@ -433,7 +438,7 @@ export default function SeqPickerModal({
               >
                 <Icon name="plus" size={14} color={colors.brick}/>
                 <Text style={{ fontFamily: fonts.bodyBd, fontSize: 13, color: colors.brick }}>
-                  {`Build a new ${mode === 'pattern' ? 'pattern' : 'sequence'} from scratch`}
+                  {mode === 'pattern' ? t('pickerSeq.buildNewPattern') : t('pickerSeq.buildNewSequence')}
                 </Text>
               </Pressable>
             </ScrollView>

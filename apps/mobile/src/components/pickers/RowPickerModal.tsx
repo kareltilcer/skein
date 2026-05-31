@@ -1,6 +1,7 @@
 import React, {useEffect, useMemo, useState} from 'react'
 import {Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, useWindowDimensions, View,} from 'react-native'
 import {BlurView} from 'expo-blur'
+import {useTranslation} from 'react-i18next'
 import {useTheme} from '../../theme/ThemeContext'
 import {STITCH_MAP} from '../../tokens/stitches'
 import {useLibraryStore} from '../../store/libraryStore'
@@ -10,12 +11,6 @@ import Icon from '../ui/Icon'
 import type {Craft, LibraryRow} from '../../types'
 
 type SortKey = 'recent' | 'used' | 'az'
-
-const SORT_OPTS: { id: SortKey; label: string; sub: string }[] = [
-  { id: 'recent', label: 'Recent',    sub: 'last used'    },
-  { id: 'used',   label: 'Most used', sub: 'across all'   },
-  { id: 'az',     label: 'A → Z',     sub: 'alphabetical' },
-]
 
 const H_PAD = 20
 
@@ -32,8 +27,15 @@ type Props = {
 export default function RowPickerModal({
   visible, onClose, onSelect, onBuildNew, craftFilter,
 }: Props) {
+  const { t } = useTranslation()
   const { colors, fonts, radius } = useTheme()
   const { height: screenHeight } = useWindowDimensions()
+
+  const SORT_OPTS: { id: SortKey; label: string; sub: string }[] = [
+    { id: 'recent', label: t('pickerRow.sortRecent'), sub: t('pickerRow.sortRecentSub') },
+    { id: 'used',   label: t('pickerRow.sortUsed'),   sub: t('pickerRow.sortUsedSub')   },
+    { id: 'az',     label: t('pickerRow.sortAZ'),     sub: t('pickerRow.sortAZSub')     },
+  ]
 
   const rows = useLibraryStore(s => s.rows)
   const userDefaultCraft = useSettingsStore(s => s.defaultCraft)
@@ -79,7 +81,7 @@ export default function RowPickerModal({
     i % 3 === 0 ? colors.brick : i % 3 === 1 ? colors.mustard : colors.forest
 
   const metaLine = (row: LibraryRow) => {
-    return `${row.stitches.reduce((s, si) => s + si.count, 0)} sts`
+    return t('common.sts', { count: row.stitches.reduce((s, si) => s + si.count, 0) })
   }
 
   return (
@@ -118,13 +120,13 @@ export default function RowPickerModal({
                     fontFamily: fonts.display, fontSize: 24, color: colors.brick,
                     letterSpacing: -0.25, lineHeight: 28,
                   }}>
-                    Add a row
+                    {t('pickerRow.title')}
                   </Text>
                   <Text style={{
                     fontFamily: fonts.mono, fontSize: 10, color: colors.inkMute,
                     letterSpacing: 1.0, textTransform: 'uppercase', marginTop: 6,
                   }}>
-                    One row · {rows.length} saved in your library
+                    {t('pickerRow.sub', { count: rows.length })}
                   </Text>
                 </View>
                 <Pressable onPress={onClose} hitSlop={12}>
@@ -141,7 +143,7 @@ export default function RowPickerModal({
                 <TextInput
                   value={query}
                   onChangeText={setQuery}
-                  placeholder="Search rows by name, stitch, notation…"
+                  placeholder={t('pickerRow.searchPlaceholder')}
                   placeholderTextColor={colors.inkMute}
                   autoCapitalize="none"
                   autoCorrect={false}
@@ -190,9 +192,9 @@ export default function RowPickerModal({
               {/* Craft filter pills */}
               <View style={[styles.craftRow, { marginTop: 12 }]}>
                 {([
-                  { id: 'all',     label: 'All',     icon: null       },
-                  { id: 'knit',    label: 'Knit',    icon: 'needle'   },
-                  { id: 'crochet', label: 'Crochet', icon: 'loop'     },
+                  { id: 'all',     label: t('craft.all'),     icon: null       },
+                  { id: 'knit',    label: t('craft.knit'),    icon: 'needle'   },
+                  { id: 'crochet', label: t('craft.crochet'), icon: 'loop'     },
                 ] as const).map(c => {
                   const active = craft === c.id
                   return (
@@ -242,19 +244,19 @@ export default function RowPickerModal({
                   }}>
                     {craft !== 'all' ? (
                       <>
-                        {'No '}
+                        {t('pickerRow.noMatchPrefix')}
                         <Text style={{ color: colors.brick, fontFamily: fonts.bodySb }}>
-                          {craft}
+                          {t(`craft.${craft}`)}
                         </Text>
-                        {' rows match this filter.'}
+                        {t('pickerRow.noMatchSuffix')}
                       </>
-                    ) : 'No rows match this filter.'}
+                    ) : t('pickerRow.noMatches')}
                   </Text>
                   <Text style={{
                     fontFamily: fonts.mono, fontSize: 11, color: colors.inkMute,
                     marginTop: 6, textAlign: 'center',
                   }}>
-                    Try "All" or build a new one.
+                    {t('pickerRow.tryAll')}
                   </Text>
                 </View>
               ) : (
@@ -346,7 +348,7 @@ export default function RowPickerModal({
               >
                 <Icon name="plus" size={14} color={colors.brick}/>
                 <Text style={{ fontFamily: fonts.bodySb, fontSize: 13, color: colors.brick }}>
-                  Build a new row from scratch
+                  {t('pickerRow.buildNew')}
                 </Text>
               </Pressable>
             </ScrollView>

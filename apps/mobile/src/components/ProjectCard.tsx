@@ -1,5 +1,6 @@
 import React from 'react'
 import { View, Text, Pressable, StyleSheet } from 'react-native'
+import { useTranslation } from 'react-i18next'
 import { useTheme } from '../theme/ThemeContext'
 import ProgressBar from './ui/ProgressBar'
 import YarnThumb from './YarnThumb'
@@ -12,6 +13,7 @@ type Props = {
 }
 
 export default function ProjectCard({ project, onPress }: Props) {
+  const { t } = useTranslation()
   const { colors, fonts, fontSize, radius, spacing } = useTheme()
   const total    = totalRows(project)
   const done     = completedRows(project)
@@ -48,7 +50,9 @@ export default function ProjectCard({ project, onPress }: Props) {
 
       <View style={[styles.counters, { marginTop: spacing[3] }]}>
         <Text style={{ fontFamily: fonts.mono, fontSize: fontSize.xs, color: colors.inkSoft }}>
-          Row {done + 1} / {total || '?'}
+          {total > 0
+            ? t('projectCard.rowOf', { current: done + 1, total })
+            : t('projectCard.rowOfUnknown', { current: done + 1 })}
         </Text>
         {seq && seq.totalRepeats > 1 ? (
           <View style={[styles.repeatBadge, { backgroundColor: colors.brick }]}>

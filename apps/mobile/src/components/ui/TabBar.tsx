@@ -1,6 +1,7 @@
 import React from 'react'
 import { View, Text, Pressable, StyleSheet } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import { useTranslation } from 'react-i18next'
 // BottomTabBarProps type from react-navigation
 type BottomTabBarProps = {
   state: { index: number; routes: { key: string; name: string }[] }
@@ -11,12 +12,13 @@ import { useTheme } from '../../theme/ThemeContext'
 import Icon from './Icon'
 
 const TABS = [
-  { name: 'index',    label: 'Projects', icon: 'home'     },
-  { name: 'library',  label: 'Library',  icon: 'library'  },
-  { name: 'settings', label: 'Settings', icon: 'settings' },
+  { name: 'index',    labelKey: 'tabs.projects', icon: 'home'     },
+  { name: 'library',  labelKey: 'tabs.library',  icon: 'library'  },
+  { name: 'settings', labelKey: 'tabs.settings', icon: 'settings' },
 ] as const
 
 export default function TabBar({ state, navigation }: BottomTabBarProps) {
+  const { t } = useTranslation()
   const { colors } = useTheme()
   const insets = useSafeAreaInsets()
 
@@ -50,7 +52,7 @@ export default function TabBar({ state, navigation }: BottomTabBarProps) {
               styles.label,
               { color: isFocused ? colors.brick : colors.inkMute },
             ]}>
-              {tab.label}
+              {t(tab.labelKey)}
             </Text>
           </Pressable>
         )
