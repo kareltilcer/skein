@@ -6,7 +6,7 @@ import { useTranslation } from 'react-i18next'
 import { useTheme } from '../theme/ThemeContext'
 import { useProjectStore, totalRows, completedRows } from '../store/projectStore'
 import { useSettingsStore } from '../store/settingsStore'
-import { STITCH_MAP } from '../tokens/stitches'
+import { useStitchMap } from '../hooks/useStitchMap'
 import Screen from '../components/ui/Screen'
 import IconBtn from '../components/ui/IconBtn'
 import ProgressBar from '../components/ui/ProgressBar'
@@ -20,7 +20,8 @@ type Props = { projectId: string }
 
 function StitchChipBig({ stitchId, color }: { stitchId: string; color: string }) {
   const { fonts } = useTheme()
-  const def = STITCH_MAP[stitchId]
+  const stitchMap = useStitchMap()
+  const def = stitchMap[stitchId]
   if (!def) return null
   return (
     <View style={[styles.bigChip, { backgroundColor: color, borderRadius: 18, shadowColor: color }]}>
@@ -53,6 +54,7 @@ export default function KnittingScreen({ projectId }: Props) {
   const advanceRow = useProjectStore((s) => s.advanceRow)
   const retreatRow = useProjectStore((s) => s.retreatRow)
   const holdTimeMs = useSettingsStore((s) => s.holdTimeMs)
+  const stitchMap = useStitchMap()
 
   if (!project) {
     return (
@@ -77,11 +79,11 @@ export default function KnittingScreen({ projectId }: Props) {
   const notation = useMemo(() => {
     const runs = groupRuns(stitchInstances)
     return runs.map((r) => {
-      const def = STITCH_MAP[r.stitchId]
+      const def = stitchMap[r.stitchId]
       const label = def && def.abbr !== '—' ? def.abbr : r.stitchId
       return r.count > 1 ? `${label}${r.count}` : label
     }).join(', ')
-  }, [stitchInstances])
+  }, [stitchInstances, stitchMap])
 
   const colorFor = (id: string) => {
     if (['k', 'sl', 'kfb', 'm1', 'c4f', 'c4b', 'sc', 'hdc'].includes(id)) return colors.brick

@@ -5,7 +5,7 @@ import _BottomSheet, { BottomSheetView as _BSView, BottomSheetScrollView as _BSS
 const BottomSheet = _BottomSheet as any, BottomSheetView = _BSView as any, BottomSheetScrollView = _BSScrollView as any
 import { useTheme } from '../../theme/ThemeContext'
 import { useLibraryStore } from '../../store/libraryStore'
-import { STITCH_MAP } from '../../tokens/stitches'
+import { useStitchMap } from '../../hooks/useStitchMap'
 import StitchGlyph from '../StitchGlyph'
 import Icon from '../ui/Icon'
 import Btn from '../ui/Btn'
@@ -25,6 +25,7 @@ export default function SequencePicker({ onSelectSequence, onSelectPattern, onCl
   const sheetRef   = useRef<any>(null)
   const snapPoints = useMemo(() => ['55%', '90%'], [])
   const { sequences, patterns } = useLibraryStore()
+  const stitchMap = useStitchMap()
 
   const [mode, setMode]         = useState<Mode>('sequence')
   const [craft, setCraft]       = useState<Craft | 'all'>(craftFilter ?? 'all')
@@ -150,7 +151,7 @@ export default function SequencePicker({ onSelectSequence, onSelectPattern, onCl
                 {active && (
                   <View style={styles.stitchRow}>
                     {previewStitches.map((si, i) => {
-                      const def = STITCH_MAP[si.stitchId]
+                      const def = stitchMap[si.stitchId]
                       if (!def) return null
                       return (
                         <View key={i} style={[styles.tinyChip, { backgroundColor: def.color, borderRadius: 5 }]}>

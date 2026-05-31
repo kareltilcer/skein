@@ -49,7 +49,10 @@ const GROUP_LABEL_KEYS: Record<string, string> = {
   basics_c:  'pickerStitch.groupCrochetBasics',
   dec_c:     'pickerStitch.groupCrochetDecreases',
   special_c: 'pickerStitch.groupCrochetSpecial',
+  my_custom: 'pickerStitch.groupMyCustoms',
 }
+
+const FILTERS_WITH_CUSTOMS: PickerFilter[] = ['all', 'knit', 'crochet', 'custom']
 
 export default function StitchPickerModal({
   visible, onClose, onSelect, onDefineCustom, craftFilter,
@@ -106,8 +109,7 @@ export default function StitchPickerModal({
 
   // Groups to display for the current filter
   const groups = useMemo(() => {
-    const pickerGroups = getPickerGroups(filter)
-    return pickerGroups
+    const builtIn = getPickerGroups(filter)
       .map((g) => {
         let items = g.ids
           .map((id) => STITCH_MAP[id])
@@ -116,7 +118,16 @@ export default function StitchPickerModal({
         return { ...g, items }
       })
       .filter((g) => g.items.length > 0)
-  }, [filter, craftFilter])
+
+    if (!FILTERS_WITH_CUSTOMS.includes(filter)) return builtIn
+
+    const customItems = craftFilter
+      ? customAsDefs.filter((s) => s.type === craftFilter)
+      : customAsDefs
+    if (customItems.length === 0) return builtIn
+
+    return [...builtIn, { id: 'my_custom', label: 'My customs', items: customItems }]
+  }, [filter, craftFilter, customAsDefs])
 
   const accentPalette = [colors.brick, colors.mustard, colors.forest, colors.brickDk]
 
@@ -225,7 +236,7 @@ export default function StitchPickerModal({
               contentContainerStyle={{ paddingTop: 12, paddingHorizontal: H_PAD }}
               keyboardShouldPersistTaps="handled"
             >
-              {filter === 'custom' ? (
+              {filter === 'custom' && (
                 /* ── Custom panel (inline quick-add mini-form) ── */
                 <View style={[styles.customPanel, {
                   backgroundColor: colors.card,
@@ -312,74 +323,74 @@ export default function StitchPickerModal({
                     {t('pickerStitch.saveCustomStitch')}
                   </Btn>
                 </View>
-              ) : (
-                /* ── Grouped stitch grid ── */
-                <>
-                  {groups.map((g) => (
-                    <View key={g.id} style={{ marginBottom: 14 }}>
-                      {/* Group header */}
-                      <View style={styles.groupHeader}>
-                        <Text style={{
-                          fontFamily: fonts.mono, fontSize: 10, color: colors.inkMute,
-                          letterSpacing: 1.8, textTransform: 'uppercase',
-                        }}>
-                          {GROUP_LABEL_KEYS[g.id] ? t(GROUP_LABEL_KEYS[g.id]!) : g.label}
-                        </Text>
-                        <Text style={{
-                          fontFamily: fonts.mono, fontSize: 10, color: colors.inkMute,
-                        }}>
-                          {g.items.length}
-                        </Text>
-                      </View>
+              )}
 
-                      {/* 5-column grid — exact repeat(5, 1fr) */}
-                      <View style={styles.chipGrid}>
-                        {g.items.map((s, i) => {
-                          const c = accentPalette[i % 4]!
-                          const isSel = selected === s.id
-                          return (
-                            <Pressable
-                              key={s.id}
-                              onPress={() => handleSelect(s)}
-                              style={[styles.gridChip, {
-                                width: chipWidth,
-                                backgroundColor: isSel ? c : colors.card,
-                                borderColor: isSel ? c : colors.rule,
-                                borderWidth: isSel ? 1.5 : 1,
-                              }]}
-                            >
-                              <View style={[styles.glyphBox, {
-                                backgroundColor: isSel ? 'rgba(255,255,255,0.18)' : c,
-                              }]}>
-                                <StitchGlyph symbol={s.symbol} size={20} color="#FBF6EC"/>
-                              </View>
-                              <Text style={{
-                                fontSize: 11, fontFamily: fonts.mono, fontWeight: '700',
-                                color: isSel ? '#FBF6EC' : colors.inkSoft,
-                              }}>
-                                {s.abbr}
-                              </Text>
-                            </Pressable>
-                          )
-                        })}
-                      </View>
-                    </View>
-                  ))}
-
-                  {/* Always-visible "Define a custom stitch" dashed CTA */}
-                  <Pressable
-                    onPress={onDefineCustom}
-                    style={[styles.defineBtn, {
-                      borderColor: colors.brick,
-                      borderRadius: 12,
-                    }]}
-                  >
-                    <Icon name="plus" size={14} color={colors.brick}/>
-                    <Text style={{ fontFamily: fonts.bodySb, fontSize: 13, color: colors.brick }}>
-                      {t('pickerStitch.defineCustomStitch')}
+              {/* ── Grouped stitch grid (built-in groups + "My customs" when applicable) ── */}
+              {groups.map((g) => (
+                <View key={g.id} style={{ marginBottom: 14 }}>
+                  {/* Group header */}
+                  <View style={styles.groupHeader}>
+                    <Text style={{
+                      fontFamily: fonts.mono, fontSize: 10, color: colors.inkMute,
+                      letterSpacing: 1.8, textTransform: 'uppercase',
+                    }}>
+                      {GROUP_LABEL_KEYS[g.id] ? t(GROUP_LABEL_KEYS[g.id]!) : g.label}
                     </Text>
-                  </Pressable>
-                </>
+                    <Text style={{
+                      fontFamily: fonts.mono, fontSize: 10, color: colors.inkMute,
+                    }}>
+                      {g.items.length}
+                    </Text>
+                  </View>
+
+                  {/* 5-column grid — exact repeat(5, 1fr) */}
+                  <View style={styles.chipGrid}>
+                    {g.items.map((s, i) => {
+                      const c = accentPalette[i % 4]!
+                      const isSel = selected === s.id
+                      return (
+                        <Pressable
+                          key={s.id}
+                          onPress={() => handleSelect(s)}
+                          style={[styles.gridChip, {
+                            width: chipWidth,
+                            backgroundColor: isSel ? c : colors.card,
+                            borderColor: isSel ? c : colors.rule,
+                            borderWidth: isSel ? 1.5 : 1,
+                          }]}
+                        >
+                          <View style={[styles.glyphBox, {
+                            backgroundColor: isSel ? 'rgba(255,255,255,0.18)' : c,
+                          }]}>
+                            <StitchGlyph symbol={s.symbol} size={20} color="#FBF6EC"/>
+                          </View>
+                          <Text style={{
+                            fontSize: 11, fontFamily: fonts.mono, fontWeight: '700',
+                            color: isSel ? '#FBF6EC' : colors.inkSoft,
+                          }}>
+                            {s.abbr}
+                          </Text>
+                        </Pressable>
+                      )
+                    })}
+                  </View>
+                </View>
+              ))}
+
+              {/* "Define a custom stitch" dashed CTA — hidden on Custom tab (inline panel covers this) */}
+              {filter !== 'custom' && (
+                <Pressable
+                  onPress={onDefineCustom}
+                  style={[styles.defineBtn, {
+                    borderColor: colors.brick,
+                    borderRadius: 12,
+                  }]}
+                >
+                  <Icon name="plus" size={14} color={colors.brick}/>
+                  <Text style={{ fontFamily: fonts.bodySb, fontSize: 13, color: colors.brick }}>
+                    {t('pickerStitch.defineCustomStitch')}
+                  </Text>
+                </Pressable>
               )}
             </ScrollView>
           </View>

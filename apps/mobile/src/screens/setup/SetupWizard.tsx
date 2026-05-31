@@ -8,7 +8,8 @@ import {useTranslation} from 'react-i18next'
 import {useTheme} from '../../theme/ThemeContext'
 import {useProjectStore} from '../../store/projectStore'
 import {useSettingsStore} from '../../store/settingsStore'
-import {STITCH_MAP, STITCHES} from '../../tokens/stitches'
+import {STITCHES} from '../../tokens/stitches'
+import {useStitchMap} from '../../hooks/useStitchMap'
 import Screen from '../../components/ui/Screen'
 import Icon from '../../components/ui/Icon'
 import Btn from '../../components/ui/Btn'
@@ -1007,6 +1008,7 @@ function Step3({draft, onChange, initialFocus, onFocusConsumed}: {
     const { t } = useTranslation()
     const {colors, fonts, spacing} = useTheme()
     const recordStitchUsed = useSettingsStore(s => s.recordStitchUsed)
+    const stitchMap = useStitchMap()
 
     const [activePart, setActivePart] = useState(0)
     const [activeRow, setActiveRow] = useState<{partIdx: number; seqIdx: number; rowIdx: number} | null>(null)
@@ -1058,14 +1060,14 @@ function Step3({draft, onChange, initialFocus, onFocusConsumed}: {
         const QUICK_KNIT    = ['k', 'p', 'yo', 'k2tog', 'ssk', 'sl']
         const QUICK_CROCHET = ['sc', 'dc', 'hdc', 'ch', 'slst', 'tr']
         const dockDefaults  = draft.craft === 'knit' ? QUICK_KNIT : QUICK_CROCHET
-        const recent = useSettingsStore.getState().recentStitchIds.filter(id => STITCH_MAP[id]?.type === draft.craft)
+        const recent = useSettingsStore.getState().recentStitchIds.filter(id => stitchMap[id]?.type === draft.craft)
         const ids: string[] = [...recent]
         for (const id of dockDefaults) {
             if (ids.length >= 6) break
             if (!ids.includes(id)) ids.push(id)
         }
         return ids.slice(0, 6)
-    }, [draft.craft])
+    }, [draft.craft, stitchMap])
 
     const [dockIds, setDockIds] = useState<string[]>(() => computeDockIds())
 
@@ -1082,7 +1084,7 @@ function Step3({draft, onChange, initialFocus, onFocusConsumed}: {
     }, [showStitchPicker, computeDockIds])
 
     const dockStitches = dockIds
-        .map(id => STITCH_MAP[id])
+        .map(id => stitchMap[id])
         .filter((s): s is NonNullable<typeof s> => !!s)
 
     const totalStitchCount = STITCHES.filter(s => s.type === draft.craft).length
@@ -1540,7 +1542,7 @@ function Step3({draft, onChange, initialFocus, onFocusConsumed}: {
                                         ) : !empty ? (
                                             <View style={{flexDirection: 'row', flexWrap: 'wrap', gap: 3}}>
                                                 {row.stitches.flatMap((si_item, idx) => {
-                                                    const def = STITCH_MAP[si_item.stitchId]
+                                                    const def = stitchMap[si_item.stitchId]
                                                     if (!def) return []
                                                     const chipColor = STITCH_BRICK.has(si_item.stitchId) ? colors.brick
                                                                     : STITCH_MUSTARD.has(si_item.stitchId) ? colors.mustard
@@ -1859,7 +1861,7 @@ function Step3({draft, onChange, initialFocus, onFocusConsumed}: {
                                         {/* Stitch chips preview */}
                                         <View style={{flexDirection: 'row', flexWrap: 'wrap', gap: 3}}>
                                             {chips.map((chip, i) => {
-                                                const def = STITCH_MAP[chip.stitchId]
+                                                const def = stitchMap[chip.stitchId]
                                                 if (!def) return null
                                                 const c = STITCH_BRICK.has(chip.stitchId) ? colors.brick
                                                         : STITCH_MUSTARD.has(chip.stitchId) ? colors.mustard
@@ -2069,7 +2071,7 @@ function Step3({draft, onChange, initialFocus, onFocusConsumed}: {
                                                         ) : (
                                                             <View style={{flexDirection: 'row', flexWrap: 'wrap', gap: 2, flex: 1}}>
                                                                 {chips.map((chip, i) => {
-                                                                    const def = STITCH_MAP[chip.stitchId]
+                                                                    const def = stitchMap[chip.stitchId]
                                                                     if (!def) return null
                                                                     const c = STITCH_BRICK.has(chip.stitchId) ? colors.brick
                                                                             : STITCH_MUSTARD.has(chip.stitchId) ? colors.mustard
@@ -2168,6 +2170,7 @@ function Step4({draft, onChange, onJumpToStep3}: {
     const { t } = useTranslation()
     const {colors, fonts, spacing} = useTheme()
     const librarySequences = useLibraryStore(s => s.sequences)
+    const stitchMap = useStitchMap()
 
     const [activePart, setActivePart] = useState(0)
     const [showSeqPicker, setShowSeqPicker] = useState(false)
@@ -2288,7 +2291,7 @@ function Step4({draft, onChange, onJumpToStep3}: {
                     {/* Stitch preview row */}
                     <View style={{flexDirection: 'row', alignItems: 'center', gap: 3, flexWrap: 'wrap', marginTop: 10}}>
                         {previewIds.map((id, i) => {
-                            const def = STITCH_MAP[id]
+                            const def = stitchMap[id]
                             if (!def) return null
                             return (
                                 <View key={`${id}-${i}`} style={{
@@ -2350,7 +2353,7 @@ function Step4({draft, onChange, onJumpToStep3}: {
                 </View>
             </ScaleDecorator>
         )
-    }, [colors, fonts, safeActive, part])
+    }, [colors, fonts, safeActive, part, stitchMap])
 
     const listHeader = (
         <View>

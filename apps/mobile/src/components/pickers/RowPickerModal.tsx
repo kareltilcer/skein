@@ -3,7 +3,7 @@ import {Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, useWindowDime
 import {BlurView} from 'expo-blur'
 import {useTranslation} from 'react-i18next'
 import {useTheme} from '../../theme/ThemeContext'
-import {STITCH_MAP} from '../../tokens/stitches'
+import {useStitchMap} from '../../hooks/useStitchMap'
 import {useLibraryStore} from '../../store/libraryStore'
 import {useSettingsStore} from '../../store/settingsStore'
 import StitchGlyph from '../StitchGlyph'
@@ -30,6 +30,7 @@ export default function RowPickerModal({
   const { t } = useTranslation()
   const { colors, fonts, radius } = useTheme()
   const { height: screenHeight } = useWindowDimensions()
+  const stitchMap = useStitchMap()
 
   const SORT_OPTS: { id: SortKey; label: string; sub: string }[] = [
     { id: 'recent', label: t('pickerRow.sortRecent'), sub: t('pickerRow.sortRecentSub') },
@@ -275,7 +276,7 @@ export default function RowPickerModal({
                       {/* Mini stitch chart — first 5 cells */}
                       <View style={{ flexDirection: 'row', gap: 2, flexShrink: 0 }}>
                         {row.stitches.slice(0, 5).map((si, i) => {
-                          const def = STITCH_MAP[si.stitchId]
+                          const def = stitchMap[si.stitchId]
                           const c = stitchColor(i)
                           return (
                             <View

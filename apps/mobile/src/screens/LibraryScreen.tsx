@@ -10,7 +10,7 @@ import Screen from '../components/ui/Screen'
 import AppBar from '../components/ui/AppBar'
 import Icon from '../components/ui/Icon'
 import StitchGlyph from '../components/StitchGlyph'
-import { STITCH_MAP } from '../tokens/stitches'
+import { useStitchMap } from '../hooks/useStitchMap'
 import type { Craft, LibrarySequence, LibraryPattern, LibraryRow } from '../types'
 
 type Tab = 'pat' | 'seq' | 'row'
@@ -19,6 +19,7 @@ type CraftFilter = Craft | 'all'
 function SequenceCard({ seq }: { seq: LibrarySequence }) {
   const { t } = useTranslation()
   const { colors, fonts, fontSize, spacing, radius } = useTheme()
+  const stitchMap = useStitchMap()
   const previewStitches = seq.rows[0]?.stitches.slice(0, 4) ?? []
   return (
     <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.rule, borderRadius: radius.lg }]}>
@@ -26,7 +27,7 @@ function SequenceCard({ seq }: { seq: LibrarySequence }) {
         <View style={[styles.thumbBox, { backgroundColor: colors.cream2, borderRadius: radius.md }]}>
           <View style={styles.thumbGlyphs}>
             {previewStitches.map((si, i) => {
-              const def = STITCH_MAP[si.stitchId]
+              const def = stitchMap[si.stitchId]
               if (!def) return null
               return <StitchGlyph key={i} symbol={def.symbol} size={14} color={colors.inkSoft}/>
             })}
@@ -70,6 +71,7 @@ function PatternCard({ pat }: { pat: LibraryPattern }) {
 function RowCard({ row }: { row: LibraryRow }) {
   const { t } = useTranslation()
   const { colors, fonts, fontSize, spacing, radius } = useTheme()
+  const stitchMap = useStitchMap()
   const preview = row.stitches.slice(0, 5)
   const hasRepeat = !!row.segments
   return (
@@ -94,7 +96,7 @@ function RowCard({ row }: { row: LibraryRow }) {
       </View>
       <View style={[styles.glyphRow, { marginTop: spacing[2] }]}>
         {preview.map((si, i) => {
-          const def = STITCH_MAP[si.stitchId]
+          const def = stitchMap[si.stitchId]
           if (!def) return null
           return (
             <View key={i} style={[styles.miniChip, { backgroundColor: def.color, borderRadius: 6 }]}>

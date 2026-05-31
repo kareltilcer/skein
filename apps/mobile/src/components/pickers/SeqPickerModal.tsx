@@ -6,7 +6,7 @@ import {
 import { BlurView } from 'expo-blur'
 import { useTranslation } from 'react-i18next'
 import { useTheme } from '../../theme/ThemeContext'
-import { STITCH_MAP } from '../../tokens/stitches'
+import { useStitchMap } from '../../hooks/useStitchMap'
 import { useLibraryStore } from '../../store/libraryStore'
 import { useSettingsStore } from '../../store/settingsStore'
 import StitchGlyph from '../StitchGlyph'
@@ -35,6 +35,7 @@ export default function SeqPickerModal({
   const { t } = useTranslation()
   const { colors, fonts, radius } = useTheme()
   const { height: screenHeight } = useWindowDimensions()
+  const stitchMap = useStitchMap()
 
   const sequences = useLibraryStore(s => s.sequences)
   const patterns  = useLibraryStore(s => s.patterns)
@@ -279,7 +280,7 @@ export default function SeqPickerModal({
                           <View style={[styles.thumb, { backgroundColor: tileColor(i), padding: 5 }]}>
                             {[0, 1, 2, 3].map(cellIdx => {
                               const si = thumbStitches[cellIdx]
-                              const def = si ? STITCH_MAP[si.stitchId] : undefined
+                              const def = si ? stitchMap[si.stitchId] : undefined
                               return (
                                 <View key={cellIdx} style={styles.thumbCell}>
                                   {def && (

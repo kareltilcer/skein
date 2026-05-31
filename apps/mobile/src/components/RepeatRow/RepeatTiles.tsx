@@ -2,12 +2,12 @@ import React from 'react'
 import { View, Text, Pressable } from 'react-native'
 import { useTranslation } from 'react-i18next'
 import { useTheme } from '../../theme/ThemeContext'
-import { STITCH_MAP } from '../../tokens/stitches'
 import StitchGlyph from '../StitchGlyph'
 import Icon from '../ui/Icon'
 import { stitchHue } from './stitchHue'
-import type { RepeatRule, RowSegment, StitchInstance } from '../../types'
+import type { RepeatRule, RowSegment, StitchInstance, StitchDef } from '../../types'
 import { expandStitches } from './segments'
+import { useStitchMap } from '../../hooks/useStitchMap'
 
 export type TileState = 'normal' | 'dim' | 'inrepeat' | 'start' | 'end' | 'tap'
 
@@ -23,8 +23,9 @@ export function StitchTile({
 }) {
   const { t } = useTranslation()
   const { theme, colors, fonts } = useTheme()
+  const stitchMap = useStitchMap()
   const dark = theme === 'dark'
-  const def = STITCH_MAP[id]
+  const def = stitchMap[id]
   const symbol = def?.symbol ?? 'dot'
   const abbr   = def?.abbr   ?? id
   const c = stitchHue(colors, id)
@@ -118,10 +119,13 @@ export function useRuleText() {
   }
 }
 
-export function collapseRunsToText(stitches: StitchInstance[]): string {
+export function collapseRunsToText(
+  stitches: StitchInstance[],
+  stitchMap: Record<string, StitchDef>,
+): string {
   return stitches
     .map(inst => {
-      const def = STITCH_MAP[inst.stitchId]
+      const def = stitchMap[inst.stitchId]
       const ab = def?.abbr ?? inst.stitchId
       return inst.count > 1 ? `${ab}${inst.count}` : ab
     })
@@ -168,16 +172,17 @@ export function RepeatGroup({ stitches, rule }: { stitches: StitchInstance[]; ru
 export function RowNotation({ segments }: { segments: RowSegment[] }) {
   const { colors, fonts } = useTheme()
   const ruleText = useRuleText()
+  const stitchMap = useStitchMap()
   const parts: React.ReactNode[] = []
   segments.forEach((seg, i) => {
     if (i > 0) parts.push(<Text key={`sep${i}`} style={{ color: colors.inkMute }}>, </Text>)
     if (seg.type === 'fixed') {
-      parts.push(<Text key={`f${i}`}>{collapseRunsToText(seg.stitches)}</Text>)
+      parts.push(<Text key={`f${i}`}>{collapseRunsToText(seg.stitches, stitchMap)}</Text>)
     } else {
       parts.push(
         <Text key={`r${i}`}>
           <Text style={{ color: colors.brick, fontWeight: '700' }}>(</Text>
-          {collapseRunsToText(seg.stitches)}
+          {collapseRunsToText(seg.stitches, stitchMap)}
           <Text style={{ color: colors.brick, fontWeight: '700' }}>)</Text>
           <Text style={{ color: colors.brick, fontWeight: '700' }}> {ruleText.long(seg.rule)}</Text>
         </Text>,
