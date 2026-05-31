@@ -212,11 +212,12 @@ const Step1 = forwardRef<Step1Handle, {
                 }]}>
                     <TextInput
                         value={draft.name}
-                        onChangeText={(text) => onChange({...draft, name: text.slice(0, MAX_NAME)})}
+                        onChangeText={(text) => onChange({...draft, name: text})}
+                        maxLength={MAX_NAME}
                         placeholder={t('wizard.namePlaceholder')}
                         placeholderTextColor={colors.inkMute}
                         style={{
-                            fontFamily: fonts.display,
+                            fontFamily: fonts.displayInput,
                             fontSize: fontSize['2xl'],
                             color: colors.ink,
                             letterSpacing: -0.5,
@@ -874,7 +875,7 @@ function Step2({draft, onChange}: { draft: Draft; onChange: (d: Draft) => void }
                                             placeholder={t('wizard.partNamePlaceholder')}
                                             placeholderTextColor={colors.inkMute}
                                             style={{
-                                                fontFamily: fonts.display, fontSize: 22,
+                                                fontFamily: fonts.displayInput, fontSize: 22,
                                                 color: colors.ink, letterSpacing: -0.25,
                                             }}
                                         />
@@ -996,7 +997,6 @@ function Step3({draft, onChange, initialFocus, onFocusConsumed}: {
 }) {
     const { t } = useTranslation()
     const {colors, fonts, spacing} = useTheme()
-    const recentStitchIds  = useSettingsStore(s => s.recentStitchIds)
     const recordStitchUsed = useSettingsStore(s => s.recordStitchUsed)
 
     const [activePart, setActivePart] = useState(0)
@@ -1037,18 +1037,37 @@ function Step3({draft, onChange, initialFocus, onFocusConsumed}: {
 
     const part = draft.parts[activePart]
 
-    // Dock stitches — most recently used (for current craft), falling back to defaults
-    const QUICK_KNIT    = ['k', 'p', 'yo', 'k2tog', 'ssk', 'sl']
-    const QUICK_CROCHET = ['sc', 'dc', 'hdc', 'ch', 'slst', 'tr']
-    const dockDefaults  = draft.craft === 'knit' ? QUICK_KNIT : QUICK_CROCHET
+    // Dock stitches — snapshot of most-recently-used (for current craft), falling back to defaults.
+    // Snapshot is refreshed on mount, on craft change, and when the full picker closes —
+    // but NOT while the user is tapping dock tiles, so the order stays stable mid-row.
+    const computeDockIds = useCallback((): string[] => {
+        const QUICK_KNIT    = ['k', 'p', 'yo', 'k2tog', 'ssk', 'sl']
+        const QUICK_CROCHET = ['sc', 'dc', 'hdc', 'ch', 'slst', 'tr']
+        const dockDefaults  = draft.craft === 'knit' ? QUICK_KNIT : QUICK_CROCHET
+        const recent = useSettingsStore.getState().recentStitchIds.filter(id => STITCH_MAP[id]?.type === draft.craft)
+        const ids: string[] = [...recent]
+        for (const id of dockDefaults) {
+            if (ids.length >= 6) break
+            if (!ids.includes(id)) ids.push(id)
+        }
+        return ids.slice(0, 6)
+    }, [draft.craft])
 
-    const craftRecent = recentStitchIds.filter(id => STITCH_MAP[id]?.type === draft.craft)
-    const dockIds: string[] = [...craftRecent]
-    for (const id of dockDefaults) {
-        if (dockIds.length >= 6) break
-        if (!dockIds.includes(id)) dockIds.push(id)
-    }
-    const dockStitches = dockIds.slice(0, 6)
+    const [dockIds, setDockIds] = useState<string[]>(() => computeDockIds())
+
+    React.useEffect(() => {
+        setDockIds(computeDockIds())
+    }, [computeDockIds])
+
+    const prevShowStitchPicker = useRef(showStitchPicker)
+    React.useEffect(() => {
+        if (prevShowStitchPicker.current && !showStitchPicker) {
+            setDockIds(computeDockIds())
+        }
+        prevShowStitchPicker.current = showStitchPicker
+    }, [showStitchPicker, computeDockIds])
+
+    const dockStitches = dockIds
         .map(id => STITCH_MAP[id])
         .filter((s): s is NonNullable<typeof s> => !!s)
 
@@ -1279,7 +1298,7 @@ function Step3({draft, onChange, initialFocus, onFocusConsumed}: {
                                             cursorColor={colors.brick}
                                             selectionColor={colors.brick}
                                             style={{
-                                                fontFamily: fonts.display, fontSize: 20,
+                                                fontFamily: fonts.displayInput, fontSize: 20,
                                                 color: colors.ink, letterSpacing: -0.2,
                                                 padding: 0, margin: 0,
                                             }}

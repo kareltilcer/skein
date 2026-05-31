@@ -221,7 +221,8 @@ export default function DefineCustomStitchScreen({ visible, onClose, onSaved, de
                   }]}>
                     <TextInput
                       value={abbr}
-                      onChangeText={(text) => setAbbr(text.slice(0, 8))}
+                      onChangeText={setAbbr}
+                      maxLength={8}
                       placeholder={t('customStitch.abbrPlaceholder')}
                       placeholderTextColor={colors.inkMute}
                       autoCapitalize="none"
@@ -245,7 +246,8 @@ export default function DefineCustomStitchScreen({ visible, onClose, onSaved, de
                   }]}>
                     <TextInput
                       value={name}
-                      onChangeText={(text) => setName(text.slice(0, 36))}
+                      onChangeText={setName}
+                      maxLength={36}
                       placeholder={t('customStitch.namePlaceholder')}
                       placeholderTextColor={colors.inkMute}
                       style={{
@@ -424,7 +426,8 @@ export default function DefineCustomStitchScreen({ visible, onClose, onSaved, de
               }]}>
                 <TextInput
                   value={notation}
-                  onChangeText={(text) => setNotation(text.slice(0, 240))}
+                  onChangeText={setNotation}
+                  maxLength={240}
                   placeholder={t('customStitch.notationPlaceholder')}
                   placeholderTextColor={colors.inkMute}
                   multiline

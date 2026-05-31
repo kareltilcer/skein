@@ -249,7 +249,8 @@ export default function StitchPickerModal({
                     }]}>
                       <TextInput
                         value={panelAbbr}
-                        onChangeText={(text) => setPanelAbbr(text.slice(0, 8))}
+                        onChangeText={setPanelAbbr}
+                        maxLength={8}
                         placeholder={t('pickerStitch.abbrPlaceholder')}
                         placeholderTextColor={colors.inkMute}
                         autoCapitalize="none"
@@ -261,7 +262,8 @@ export default function StitchPickerModal({
                     }]}>
                       <TextInput
                         value={panelName}
-                        onChangeText={(text) => setPanelName(text.slice(0, 36))}
+                        onChangeText={setPanelName}
+                        maxLength={36}
                         placeholder={t('pickerStitch.namePlaceholder')}
                         placeholderTextColor={colors.inkMute}
                         style={{ fontFamily: fonts.mono, fontSize: 13, color: colors.ink }}

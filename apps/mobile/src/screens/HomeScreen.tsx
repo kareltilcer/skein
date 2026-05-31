@@ -10,7 +10,6 @@ import { useProjectStore } from '../store/projectStore'
 import Screen from '../components/ui/Screen'
 import AppBar from '../components/ui/AppBar'
 import Icon from '../components/ui/Icon'
-import IconBtn from '../components/ui/IconBtn'
 import ProjectCard from '../components/ProjectCard'
 import type { Project } from '../types'
 
@@ -51,7 +50,6 @@ export default function HomeScreen() {
         title={t('home.title')}
         sub={subTitle}
         leading={<SkeinLogoSmall fg={colors.brick} accent={colors.mustard}/>}
-        trailing={<IconBtn name="search"/>}
       />
 
       <ScrollView
@@ -117,7 +115,7 @@ export default function HomeScreen() {
                   {t('home.finished')} · {finished.length}
                 </Text>
               </View>
-              <Icon name="chevDown" size={16} color={colors.inkMute}/>
+              <Icon name={finishedOpen ? 'chevDown' : 'chevR'} size={16} color={colors.inkMute}/>
             </Pressable>
             {finishedOpen && finished.map((p) => (
               <ProjectCard key={p.id} project={p} onPress={() => openProject(p)}/>

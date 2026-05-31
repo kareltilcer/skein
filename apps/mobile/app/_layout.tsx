@@ -10,6 +10,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context'
 import { GestureHandlerRootView } from 'react-native-gesture-handler'
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet'
 import { useFonts, Caprasimo_400Regular } from '@expo-google-fonts/caprasimo'
+import { NotoSerifDisplay_700Bold } from '@expo-google-fonts/noto-serif-display'
 import { DMSans_400Regular, DMSans_500Medium, DMSans_600SemiBold, DMSans_700Bold } from '@expo-google-fonts/dm-sans'
 import { DMMono_400Regular } from '@expo-google-fonts/dm-mono'
 import * as SplashScreen from 'expo-splash-screen'
@@ -35,6 +36,7 @@ function RootLayout() {
 
   const [fontsLoaded] = useFonts({
     Caprasimo_400Regular,
+    NotoSerifDisplay_700Bold,
     DMSans_400Regular,
     DMSans_500Medium,
     DMSans_600SemiBold,

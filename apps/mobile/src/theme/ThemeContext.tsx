@@ -1,13 +1,14 @@
-import React, { createContext, useContext } from 'react'
+import React, { createContext, useContext, useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import { getColors, type ColorTokens } from '../tokens/colors'
-import { FontFamily, FontSize } from '../tokens/typography'
+import { FontFamily, FontSize, resolveDisplayFont } from '../tokens/typography'
 import { Spacing, Radius } from '../tokens/spacing'
 import type { ResolvedTheme } from '../types'
 
 type ThemeContextValue = {
   theme: ResolvedTheme
   colors: ColorTokens
-  fonts: typeof FontFamily
+  fonts: { [K in keyof typeof FontFamily]: string }
   fontSize: typeof FontSize
   spacing: typeof Spacing
   radius: typeof Radius
@@ -22,10 +23,15 @@ export function ThemeProvider({
   theme: ResolvedTheme
   children: React.ReactNode
 }) {
+  const { i18n } = useTranslation()
+  const fonts = useMemo(
+    () => ({ ...FontFamily, display: resolveDisplayFont(i18n.language) }),
+    [i18n.language],
+  )
   const value: ThemeContextValue = {
     theme,
     colors: getColors(theme),
-    fonts: FontFamily,
+    fonts,
     fontSize: FontSize,
     spacing: Spacing,
     radius: Radius,

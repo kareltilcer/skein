@@ -1,11 +1,20 @@
+// Caprasimo has no glyphs for ě/č/ř/ž/ů/ď/ť/ň — it's used for English headings only.
+// Non-English locales fall back to Noto Serif Display (full Unicode). Text inputs
+// always use Noto so anything the user types renders, regardless of UI language.
 export const FontFamily = {
-  display: 'Caprasimo_400Regular',
-  body:    'DMSans_400Regular',
-  bodyMd:  'DMSans_500Medium',
-  bodySb:  'DMSans_600SemiBold',
-  bodyBd:  'DMSans_700Bold',
-  mono:    'DMMono_400Regular',
+  display:      'Caprasimo_400Regular',
+  displayAlt:   'NotoSerifDisplay_700Bold',
+  displayInput: 'NotoSerifDisplay_700Bold',
+  body:         'DMSans_400Regular',
+  bodyMd:       'DMSans_500Medium',
+  bodySb:       'DMSans_600SemiBold',
+  bodyBd:       'DMSans_700Bold',
+  mono:         'DMMono_400Regular',
 } as const
+
+export function resolveDisplayFont(language: string | undefined): string {
+  return language?.startsWith('en') ? FontFamily.display : FontFamily.displayAlt
+}
 
 export const FontSize = {
   xs:   11,
