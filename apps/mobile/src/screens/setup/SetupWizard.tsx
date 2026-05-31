@@ -19,7 +19,15 @@ import RowPickerModal from '../../components/pickers/RowPickerModal'
 import SeqPickerModal from '../../components/pickers/SeqPickerModal'
 import DefineCustomStitchScreen from './DefineCustomStitchScreen'
 import {useLibraryStore} from '../../store/libraryStore'
-import type {StitchInstance, Craft, StitchDef, LibraryRow, LibrarySequence, LibraryPattern} from '../../types'
+import type {StitchInstance, Craft, StitchDef, LibraryRow, LibrarySequence, LibraryPattern, RowSegment} from '../../types'
+import RepeatRowBody from '../../components/RepeatRow/RepeatRowBody'
+import {StitchTile} from '../../components/RepeatRow/RepeatTiles'
+import {
+    appendStitchPreservingSegments,
+    expandStitches,
+    removeLastStitchPreservingSegments,
+    segmentsFromMark,
+} from '../../components/RepeatRow/segments'
 import _DraggableFlatList, {ScaleDecorator as _ScaleDecorator} from 'react-native-draggable-flatlist'
 const DraggableFlatList = _DraggableFlatList as any
 const ScaleDecorator = _ScaleDecorator as any
@@ -86,6 +94,7 @@ type DraftSequence = {
 type DraftRow = {
     id: string; label: string
     stitches: StitchInstance[]
+    segments?: RowSegment[]
 }
 
 type Draft = {
@@ -1010,6 +1019,11 @@ function Step3({draft, onChange, initialFocus, onFocusConsumed}: {
     const [collapsedSeqs, setCollapsedSeqs] = useState<Set<string>>(new Set())
     const [confirmDialog, setConfirmDialog] = useState<{seqIdx: number; rowIdx: number} | null>(null)
     const [confirmSeqDialog, setConfirmSeqDialog] = useState<{seqIdx: number} | null>(null)
+    const [marking, setMarking] = useState<{
+        partIdx: number; seqIdx: number; rowIdx: number
+        step: 'start' | 'end'
+        start: number | null
+    } | null>(null)
 
     React.useEffect(() => {
         if (!initialFocus) return
@@ -1084,7 +1098,7 @@ function Step3({draft, onChange, initialFocus, onFocusConsumed}: {
 
     const addRowFromLib = (seqIdx: number, libRow: LibraryRow) => {
         const seq = part!.sequences[seqIdx]!
-        const newRow: DraftRow = {id: uuid4(), label: libRow.label, stitches: libRow.stitches}
+        const newRow: DraftRow = {id: uuid4(), label: libRow.label, stitches: libRow.stitches, segments: libRow.segments}
         const newRowIdx = seq.rows.length
         updateSeq(activePart, seqIdx, {...seq, rows: [...seq.rows, newRow]})
         setActiveRow({partIdx: activePart, seqIdx, rowIdx: newRowIdx})
@@ -1094,7 +1108,7 @@ function Step3({draft, onChange, initialFocus, onFocusConsumed}: {
     const addSeqFromLib = (libSeq: LibrarySequence) => {
         const newSeq: DraftSequence = {
             id: uuid4(), name: libSeq.name,
-            rows: libSeq.rows.map(r => ({...r, id: uuid4()})),
+            rows: libSeq.rows.map(r => ({id: uuid4(), label: r.label, stitches: r.stitches, segments: r.segments})),
             totalRepeats: libSeq.totalRepeats,
             loop: libSeq.loop,
         }
@@ -1109,7 +1123,7 @@ function Step3({draft, onChange, initialFocus, onFocusConsumed}: {
             .filter((s): s is LibrarySequence => Boolean(s))
             .map(libSeq => ({
                 id: uuid4(), name: libSeq.name,
-                rows: libSeq.rows.map(r => ({...r, id: uuid4()})),
+                rows: libSeq.rows.map(r => ({id: uuid4(), label: r.label, stitches: r.stitches, segments: r.segments})),
                 totalRepeats: libSeq.totalRepeats,
                 loop: libSeq.loop,
             }))
@@ -1122,6 +1136,7 @@ function Step3({draft, onChange, initialFocus, onFocusConsumed}: {
         const seq = part!.sequences[seqIdx]!
         updateSeq(activePart, seqIdx, {...seq, rows: seq.rows.filter((_, i) => i !== rowIdx)})
         if (activeRow?.seqIdx === seqIdx && activeRow?.rowIdx === rowIdx) setActiveRow(null)
+        if (marking?.seqIdx === seqIdx && marking?.rowIdx === rowIdx) setMarking(null)
     }
 
     const confirmRemoveRow = (seqIdx: number, rowIdx: number) => {
@@ -1140,6 +1155,7 @@ function Step3({draft, onChange, initialFocus, onFocusConsumed}: {
         setFocusedSeq(null)
         if (activeRow?.seqIdx === seqIdx) setActiveRow(null)
         else if (activeRow && activeRow.seqIdx > seqIdx) setActiveRow({...activeRow, seqIdx: activeRow.seqIdx - 1})
+        if (marking?.seqIdx === seqIdx) setMarking(null)
     }
 
     const confirmRemoveSeq = (seqIdx: number) => setConfirmSeqDialog({seqIdx})
@@ -1154,13 +1170,10 @@ function Step3({draft, onChange, initialFocus, onFocusConsumed}: {
         const seq = part!.sequences[seqIdx]!
         const row = seq.rows[rowIdx]!
         if (row.stitches.length === 0) return
-        const last = row.stitches[row.stitches.length - 1]!
-        const newStitches = last.count > 1
-            ? [...row.stitches.slice(0, -1), {...last, count: last.count - 1}]
-            : row.stitches.slice(0, -1)
+        const nextRow = removeLastStitchPreservingSegments(row)
         updateSeq(activePart, seqIdx, {
             ...seq,
-            rows: seq.rows.map((r, i) => i === rowIdx ? {...r, stitches: newStitches} : r),
+            rows: seq.rows.map((r, i) => i === rowIdx ? nextRow as DraftRow : r),
         })
     }
 
@@ -1182,15 +1195,47 @@ function Step3({draft, onChange, initialFocus, onFocusConsumed}: {
     }
 
     const addStitchToRow = (partIdx: number, seqIdx: number, rowIdx: number, stitchId: string) => {
-        const row = draft.parts[partIdx]!.sequences[seqIdx]!.rows[rowIdx]!
-        const last = row.stitches[row.stitches.length - 1]
-        const newStitches: StitchInstance[] =
-            last && last.stitchId === stitchId
-                ? [...row.stitches.slice(0, -1), {stitchId, count: last.count + 1}]
-                : [...row.stitches, {stitchId, count: 1}]
         const seq = draft.parts[partIdx]!.sequences[seqIdx]!
-        updateSeq(partIdx, seqIdx, {...seq, rows: seq.rows.map((r, i) => i === rowIdx ? {...r, stitches: newStitches} : r)})
+        const row = seq.rows[rowIdx]!
+        const nextRow = appendStitchPreservingSegments(row, stitchId)
+        updateSeq(partIdx, seqIdx, {...seq, rows: seq.rows.map((r, i) => i === rowIdx ? nextRow as DraftRow : r)})
         recordStitchUsed(stitchId)
+    }
+
+    const startMarking = (seqIdx: number, rowIdx: number) => {
+        const seq = part!.sequences[seqIdx]!
+        const row = seq.rows[rowIdx]!
+        if (row.stitches.length === 0) return
+        if (row.segments) {
+            const {segments: _drop, ...rest} = row
+            updateSeq(activePart, seqIdx, {
+                ...seq,
+                rows: seq.rows.map((r, i) => i === rowIdx ? (rest as DraftRow) : r),
+            })
+        }
+        setActiveRow(null)
+        setShowStitchPicker(false)
+        setMarking({partIdx: activePart, seqIdx, rowIdx, step: 'start', start: null})
+    }
+
+    const cancelMarking = () => setMarking(null)
+
+    const handleMarkTap = (tileIdx: number) => {
+        if (!marking) return
+        if (marking.step === 'start') {
+            setMarking({...marking, step: 'end', start: tileIdx})
+            return
+        }
+        const start = marking.start
+        if (start == null || tileIdx < start) return
+        const seq = draft.parts[marking.partIdx]!.sequences[marking.seqIdx]!
+        const row = seq.rows[marking.rowIdx]!
+        const segments = segmentsFromMark(row.stitches, start, tileIdx)
+        updateSeq(marking.partIdx, marking.seqIdx, {
+            ...seq,
+            rows: seq.rows.map((r, i) => i === marking.rowIdx ? ({...r, segments} as DraftRow) : r),
+        })
+        setMarking(null)
     }
 
     const handlePickerSelect = (stitch: StitchDef) => {
@@ -1201,7 +1246,7 @@ function Step3({draft, onChange, initialFocus, onFocusConsumed}: {
 
     if (!part) return null
 
-    const dockVisible = activeRow !== null && !showStitchPicker
+    const dockVisible = activeRow !== null && !showStitchPicker && marking === null
 
     return (
         <View style={{flex: 1}}>
@@ -1249,9 +1294,13 @@ function Step3({draft, onChange, initialFocus, onFocusConsumed}: {
                 {part.sequences.map((seq, si) => {
                     const seqColor = [colors.mustard, colors.brick, colors.forest][si % 3]!
                     const totalSts = seq.rows.reduce((sum, r) => sum + r.stitches.reduce((s2, st) => s2 + st.count, 0), 0)
+                    const seqHasRepeat = seq.rows.some(r => !!r.segments)
                     const isEditing = focusedSeq === si
+                    const seqDimmed = marking !== null && marking.seqIdx !== si
                     return (
-                    <View key={seq.id}>
+                    <View key={seq.id} style={{
+                        opacity: seqDimmed ? 0.3 : 1,
+                    }} pointerEvents={seqDimmed ? 'none' : 'auto'}>
                         {/* Sequence header */}
                         <View
                             style={{
@@ -1312,7 +1361,10 @@ function Step3({draft, onChange, initialFocus, onFocusConsumed}: {
                                         </Text>
                                     )}
                                     <Text style={{fontFamily: fonts.mono, fontSize: 10.5, color: colors.inkMute, marginTop: 3}}>
-                                        {t('common.rows', { count: seq.rows.length })} · {t('common.sts', { count: totalSts })}
+                                        {t('common.rows', { count: seq.rows.length })} · {t('common.sts', { count: totalSts })}{seqHasRepeat ? '+' : ''}
+                                        {seqHasRepeat && (
+                                            <Text style={{color: colors.brick}}>{t('wizard.step3HasRepeatSuffix')}</Text>
+                                        )}
                                         {isEditing && (
                                             <Text style={{color: colors.brick, fontWeight: '700'}}>{t('wizard.step3EditingMark')}</Text>
                                         )}
@@ -1362,30 +1414,69 @@ function Step3({draft, onChange, initialFocus, onFocusConsumed}: {
                                 const isActive = activeRow?.partIdx === activePart && activeRow?.seqIdx === si && activeRow?.rowIdx === ri
                                 const totalSts = row.stitches.reduce((sum, s) => sum + s.count, 0)
                                 const empty = totalSts === 0
+                                const isMarkingThisRow = marking?.partIdx === activePart && marking?.seqIdx === si && marking?.rowIdx === ri
+                                const rowDimmed = marking !== null && marking.seqIdx === si && !isMarkingThisRow
+                                const rowHasRepeat = !!row.segments
+                                const repeatIconActive = rowHasRepeat || isMarkingThisRow
                                 return (
                                     <Pressable
                                         key={row.id}
-                                        onPress={() => { setActiveRow({partIdx: activePart, seqIdx: si, rowIdx: ri}); setShowStitchPicker(false) }}
+                                        onPress={() => {
+                                            if (marking !== null) return
+                                            setActiveRow({partIdx: activePart, seqIdx: si, rowIdx: ri})
+                                            setShowStitchPicker(false)
+                                        }}
                                         style={{
                                             backgroundColor: colors.card,
-                                            borderWidth: isActive ? 2 : 1,
-                                            borderColor: isActive ? colors.brick : colors.rule,
+                                            borderWidth: isActive || isMarkingThisRow ? 2 : 1,
+                                            borderColor: isActive || isMarkingThisRow ? colors.brick : colors.rule,
                                             borderRadius: 14,
                                             paddingVertical: 10, paddingHorizontal: 12,
+                                            opacity: rowDimmed ? 0.35 : 1,
                                         }}
+                                        pointerEvents={rowDimmed ? 'none' : 'auto'}
                                     >
                                         {/* Row header row */}
-                                        <View style={{flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: empty ? 0 : 10, gap: 8}}>
-                                            <View style={{flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1}}>
+                                        <View style={{flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: empty && !rowHasRepeat && !isMarkingThisRow ? 0 : 10, gap: 8}}>
+                                            <View style={{flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1, flexWrap: 'wrap'}}>
                                                 <Icon name="grip" size={14} color={colors.inkMute}/>
-                                                <Text style={{fontFamily: fonts.bodySb, fontSize: 13, color: isActive ? colors.brick : colors.ink}}>
-                                                    {row.label}{isActive ? ' ✱' : ''}
+                                                <Text style={{fontFamily: fonts.bodySb, fontSize: 13, color: isActive || isMarkingThisRow ? colors.brick : colors.ink}}>
+                                                    {row.label}{(isActive || isMarkingThisRow) ? ' ✱' : ''}
                                                 </Text>
                                                 <Text style={{fontFamily: fonts.mono, fontSize: 10, color: colors.inkMute}}>
                                                     · {t('common.sts', { count: totalSts })}
                                                 </Text>
+                                                {rowHasRepeat && (
+                                                    <View style={{
+                                                        flexDirection: 'row', alignItems: 'center', gap: 3,
+                                                        backgroundColor: '#FBEFEA',
+                                                        borderWidth: 1, borderColor: 'rgba(156,61,46,0.18)',
+                                                        paddingHorizontal: 6, paddingVertical: 1, borderRadius: 6,
+                                                    }}>
+                                                        <Icon name="repeat" size={10} color={colors.brick} stroke={2.2}/>
+                                                        <Text style={{
+                                                            fontFamily: fonts.mono, fontSize: 9, fontWeight: '700',
+                                                            color: colors.brick, letterSpacing: 0.6, textTransform: 'uppercase',
+                                                        }}>{t('wizard.step3RepeatTag')}</Text>
+                                                    </View>
+                                                )}
                                             </View>
                                             <View style={{flexDirection: 'row', alignItems: 'center', gap: 10, flexShrink: 0}}>
+                                                <Pressable
+                                                    onPress={() => startMarking(si, ri)}
+                                                    hitSlop={8}
+                                                    disabled={empty}
+                                                    style={{
+                                                        width: 26, height: 26, borderRadius: 8,
+                                                        alignItems: 'center', justifyContent: 'center',
+                                                        backgroundColor: repeatIconActive ? '#FBEFEA' : 'transparent',
+                                                        borderWidth: 1,
+                                                        borderColor: repeatIconActive ? 'rgba(156,61,46,0.24)' : 'transparent',
+                                                        opacity: empty ? 0.35 : 1,
+                                                    }}
+                                                >
+                                                    <Icon name="repeat" size={14} color={repeatIconActive ? colors.brick : colors.inkMute} stroke={2}/>
+                                                </Pressable>
                                                 <Pressable onPress={() => removeLastStitch(si, ri)} hitSlop={8}>
                                                     <Icon name="backspace" size={14} color={colors.inkMute}/>
                                                 </Pressable>
@@ -1394,8 +1485,59 @@ function Step3({draft, onChange, initialFocus, onFocusConsumed}: {
                                                 </Pressable>
                                             </View>
                                         </View>
-                                        {/* Stitch cells */}
-                                        {!empty ? (
+                                        {/* Body: marking → tappable expanded tiles, segments → RepeatRowBody, else flat chips */}
+                                        {isMarkingThisRow ? (() => {
+                                            const tiles = expandStitches(row.stitches)
+                                            return (
+                                                <View>
+                                                    <View style={{
+                                                        flexDirection: 'row', alignItems: 'center', gap: 9,
+                                                        marginBottom: 16,
+                                                        backgroundColor: '#FBEFEA',
+                                                        borderWidth: 1, borderColor: 'rgba(156,61,46,0.2)',
+                                                        borderRadius: 11, paddingVertical: 8, paddingHorizontal: 11,
+                                                    }}>
+                                                        <View style={{
+                                                            width: 22, height: 22, borderRadius: 11,
+                                                            backgroundColor: colors.brick,
+                                                            alignItems: 'center', justifyContent: 'center',
+                                                        }}>
+                                                            <Text style={{fontFamily: fonts.display, fontSize: 13, color: '#FBF6EC', lineHeight: 16}}>
+                                                                {marking!.step === 'start' ? '1' : '2'}
+                                                            </Text>
+                                                        </View>
+                                                        <Text style={{
+                                                            flex: 1, fontFamily: fonts.bodySb, fontSize: 13, color: colors.ink, letterSpacing: -0.05,
+                                                        }}>
+                                                            {marking!.step === 'start' ? t('wizard.step3MarkStartInRow') : t('wizard.step3MarkEndInRow')}
+                                                        </Text>
+                                                    </View>
+                                                    <View style={{flexDirection: 'row', flexWrap: 'wrap', rowGap: 18, columnGap: 4}}>
+                                                        {tiles.map((id, idx) => {
+                                                            let state: 'tap' | 'start' | 'dim' = 'tap'
+                                                            if (idx === marking!.start) state = 'start'
+                                                            else if (marking!.step === 'end' && marking!.start !== null && idx < marking!.start) state = 'dim'
+                                                            return (
+                                                                <StitchTile
+                                                                    key={idx}
+                                                                    id={id}
+                                                                    state={state}
+                                                                    onPress={() => handleMarkTap(idx)}
+                                                                />
+                                                            )
+                                                        })}
+                                                    </View>
+                                                    <Text style={{
+                                                        fontFamily: fonts.mono, fontSize: 10, color: colors.inkMute,
+                                                        marginTop: 12, lineHeight: 15,
+                                                    }}>
+                                                        {marking!.step === 'start' ? t('wizard.step3MarkStartHint') : t('wizard.step3MarkEndHint')}
+                                                    </Text>
+                                                </View>
+                                            )
+                                        })() : row.segments ? (
+                                            <RepeatRowBody segments={row.segments}/>
+                                        ) : !empty ? (
                                             <View style={{flexDirection: 'row', flexWrap: 'wrap', gap: 3}}>
                                                 {row.stitches.flatMap((si_item, idx) => {
                                                     const def = STITCH_MAP[si_item.stitchId]
@@ -1457,7 +1599,10 @@ function Step3({draft, onChange, initialFocus, onFocusConsumed}: {
                 </View>
 
                 {/* Add sequence — ReuseChooser */}
-                <View style={{flexDirection: 'row', gap: 8, marginTop: 16}}>
+                <View
+                    style={{flexDirection: 'row', gap: 8, marginTop: 16, opacity: marking !== null ? 0.3 : 1}}
+                    pointerEvents={marking !== null ? 'none' : 'auto'}
+                >
                     <Pressable
                         onPress={addSeq}
                         style={{
@@ -1488,7 +1633,12 @@ function Step3({draft, onChange, initialFocus, onFocusConsumed}: {
                 </View>
 
                 {/* Tip — one per screen, below add-sequence */}
-                <View style={{marginTop: 14, paddingVertical: 10, paddingHorizontal: 12, backgroundColor: colors.cream2, borderRadius: 12, flexDirection: 'row', gap: 8, alignItems: 'flex-start'}}>
+                <View style={{
+                    marginTop: 14, paddingVertical: 10, paddingHorizontal: 12,
+                    backgroundColor: colors.cream2, borderRadius: 12,
+                    flexDirection: 'row', gap: 8, alignItems: 'flex-start',
+                    opacity: marking !== null ? 0.3 : 1,
+                }}>
                     <Icon name="bulb" size={14} color={colors.mustardDk}/>
                     <Text style={{fontFamily: fonts.body, fontSize: 12, color: colors.inkSoft, flex: 1, lineHeight: 18}}>
                         <Text style={{fontWeight: '700', color: colors.ink}}>{t('common.tip')} </Text>
@@ -1531,6 +1681,37 @@ function Step3({draft, onChange, initialFocus, onFocusConsumed}: {
                                 </Pressable>
                             )
                         })}
+                    </View>
+                </View>
+            )}
+
+            {/* Mark-a-repeat instruction bar — replaces the dock while marking */}
+            {marking && (
+                <View style={{
+                    position: 'absolute', bottom: 0, left: 0, right: 0,
+                    backgroundColor: colors.bg, borderTopWidth: 1, borderTopColor: colors.rule,
+                    paddingVertical: 12, paddingHorizontal: 20,
+                }}>
+                    <View style={{flexDirection: 'row', alignItems: 'center', gap: 10}}>
+                        <Icon name="repeat" size={16} color={colors.brick} stroke={2}/>
+                        <Text style={{flex: 1, fontFamily: fonts.bodySb, fontSize: 13.5, color: colors.ink}}>
+                            <Text style={{fontFamily: fonts.mono, color: colors.brick, fontWeight: '700'}}>
+                                {t('wizard.step3MarkStepIndicator', { current: marking.step === 'start' ? 1 : 2, total: 2 })}
+                            </Text>
+                            {'  '}
+                            {marking.step === 'start' ? t('wizard.step3MarkStart') : t('wizard.step3MarkEnd')}
+                        </Text>
+                        <Pressable
+                            onPress={cancelMarking}
+                            style={{
+                                borderWidth: 1, borderColor: colors.rule, borderRadius: 9,
+                                paddingHorizontal: 12, paddingVertical: 6,
+                            }}
+                        >
+                            <Text style={{fontFamily: fonts.bodySb, fontSize: 12.5, color: colors.inkSoft}}>
+                                {t('wizard.step3MarkCancel')}
+                            </Text>
+                        </Pressable>
                     </View>
                 </View>
             )}

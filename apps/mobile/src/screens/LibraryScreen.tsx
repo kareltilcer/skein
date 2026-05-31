@@ -68,13 +68,30 @@ function PatternCard({ pat }: { pat: LibraryPattern }) {
 }
 
 function RowCard({ row }: { row: LibraryRow }) {
+  const { t } = useTranslation()
   const { colors, fonts, fontSize, spacing, radius } = useTheme()
   const preview = row.stitches.slice(0, 5)
+  const hasRepeat = !!row.segments
   return (
     <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.rule, borderRadius: radius.lg }]}>
-      <Text style={{ fontFamily: fonts.bodySb, fontSize: fontSize.sm, color: colors.ink }} numberOfLines={1}>
-        {row.label}
-      </Text>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+        <Text style={{ flex: 1, fontFamily: fonts.bodySb, fontSize: fontSize.sm, color: colors.ink }} numberOfLines={1}>
+          {row.label}
+        </Text>
+        {hasRepeat && (
+          <View style={{
+            flexDirection: 'row', alignItems: 'center', gap: 3,
+            backgroundColor: '#FBEFEA', borderWidth: 1, borderColor: 'rgba(156,61,46,0.18)',
+            paddingHorizontal: 6, paddingVertical: 1, borderRadius: 6,
+          }}>
+            <Icon name="repeat" size={10} color={colors.brick} stroke={2.2}/>
+            <Text style={{
+              fontFamily: fonts.mono, fontSize: 9, fontWeight: '700',
+              color: colors.brick, letterSpacing: 0.6, textTransform: 'uppercase',
+            }}>{t('wizard.step3RepeatTag')}</Text>
+          </View>
+        )}
+      </View>
       <View style={[styles.glyphRow, { marginTop: spacing[2] }]}>
         {preview.map((si, i) => {
           const def = STITCH_MAP[si.stitchId]

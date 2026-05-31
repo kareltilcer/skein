@@ -81,7 +81,9 @@ export default function RowPickerModal({
     i % 3 === 0 ? colors.brick : i % 3 === 1 ? colors.mustard : colors.forest
 
   const metaLine = (row: LibraryRow) => {
-    return t('common.sts', { count: row.stitches.reduce((s, si) => s + si.count, 0) })
+    const sts = row.stitches.reduce((s, si) => s + si.count, 0)
+    const base = t('common.sts', { count: sts })
+    return row.segments ? `${base}${t('wizard.step3HasRepeatSuffix')}` : base
   }
 
   return (
@@ -308,15 +310,31 @@ export default function RowPickerModal({
 
                       {/* Label + meta */}
                       <View style={{ flex: 1, minWidth: 0 }}>
-                        <Text
-                          style={{
-                            fontFamily: fonts.bodySb, fontSize: 14.5,
-                            color: colors.ink, letterSpacing: -0.05,
-                          }}
-                          numberOfLines={1}
-                        >
-                          {row.label}
-                        </Text>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                          <Text
+                            style={{
+                              flex: 1, fontFamily: fonts.bodySb, fontSize: 14.5,
+                              color: colors.ink, letterSpacing: -0.05,
+                            }}
+                            numberOfLines={1}
+                          >
+                            {row.label}
+                          </Text>
+                          {row.segments && (
+                            <View style={{
+                              flexDirection: 'row', alignItems: 'center', gap: 3,
+                              backgroundColor: '#FBEFEA',
+                              borderWidth: 1, borderColor: 'rgba(156,61,46,0.18)',
+                              paddingHorizontal: 6, paddingVertical: 1, borderRadius: 6,
+                            }}>
+                              <Icon name="repeat" size={10} color={colors.brick} stroke={2.2}/>
+                              <Text style={{
+                                fontFamily: fonts.mono, fontSize: 9, fontWeight: '700',
+                                color: colors.brick, letterSpacing: 0.6, textTransform: 'uppercase',
+                              }}>{t('wizard.step3RepeatTag')}</Text>
+                            </View>
+                          )}
+                        </View>
                         <Text style={{
                           fontFamily: fonts.mono, fontSize: 11,
                           color: colors.inkMute, marginTop: 2,

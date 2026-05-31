@@ -16,10 +16,19 @@ export type StitchInstance = {
   count: number
 }
 
+export type RepeatRule =
+  | { kind: 'toLast'; n: number }
+  | { kind: 'toEnd' }
+
+export type RowSegment =
+  | { type: 'fixed';  stitches: StitchInstance[] }
+  | { type: 'repeat'; stitches: StitchInstance[]; rule: RepeatRule }
+
 export type Row = {
   id: string
   label: string
   stitches: StitchInstance[]
+  segments?: RowSegment[]
 }
 
 export type Sequence = {
@@ -81,6 +90,7 @@ export type LibraryRow = {
   label: string
   craft: Craft
   stitches: StitchInstance[]
+  segments?: RowSegment[]
   isBuiltIn: boolean
 }
 

@@ -13,6 +13,7 @@ import ProgressBar from '../components/ui/ProgressBar'
 import HoldButton from '../components/HoldButton'
 import StitchGlyph from '../components/StitchGlyph'
 import Icon from '../components/ui/Icon'
+import RepeatRowBody from '../components/RepeatRow/RepeatRowBody'
 import type { StitchInstance } from '../types'
 
 type Props = { projectId: string }
@@ -159,19 +160,25 @@ export default function KnittingScreen({ projectId }: Props) {
         </View>
 
         <ScrollView contentContainerStyle={styles.chipFlow}>
-          {stitchInstances.flatMap((si, i) =>
-            Array.from({ length: si.count }, (_, j) => (
-              <StitchChipBig key={`${i}-${j}`} stitchId={si.stitchId} color={colorFor(si.stitchId)}/>
-            )),
-          )}
-          {totalSts === 0 && (
-            <Text style={{ fontFamily: fonts.body, fontSize: fontSize.sm, color: colors.inkMute, textAlign: 'center', padding: 20 }}>
-              {t('knitting.emptyRow')}
-            </Text>
+          {row?.segments ? (
+            <RepeatRowBody segments={row.segments}/>
+          ) : (
+            <>
+              {stitchInstances.flatMap((si, i) =>
+                Array.from({ length: si.count }, (_, j) => (
+                  <StitchChipBig key={`${i}-${j}`} stitchId={si.stitchId} color={colorFor(si.stitchId)}/>
+                )),
+              )}
+              {totalSts === 0 && (
+                <Text style={{ fontFamily: fonts.body, fontSize: fontSize.sm, color: colors.inkMute, textAlign: 'center', padding: 20 }}>
+                  {t('knitting.emptyRow')}
+                </Text>
+              )}
+            </>
           )}
         </ScrollView>
 
-        {notation ? (
+        {notation && !row?.segments ? (
           <View style={[styles.notation, { backgroundColor: colors.cream2, borderRadius: radius.md }]}>
             <Text style={{ fontFamily: fonts.mono, fontSize: 13, color: colors.inkSoft, textAlign: 'center', letterSpacing: 0.3 }}>
               {notation}
