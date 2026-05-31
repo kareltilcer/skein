@@ -71,8 +71,11 @@
     "finished": "Hotovo"
   },
   "projectCard": {
-    "rowOf": "Řádek {{current}} / {{total}}",
-    "rowOfUnknown": "Řádek {{current}} / ?"
+    "doneTag": "HOTOVO",
+    "parts_one": "{{count}} díl",
+    "parts_few": "{{count}} díly",
+    "parts_many": "{{count}} dílů",
+    "parts_other": "{{count}} dílů"
   },
   "library": {
     "title": "Knihovna",
@@ -111,6 +114,9 @@
     "languagePickerTitle": "Vyber si jazyk",
     "languagePickerSub": "Jazyk, kterým s tebou YarnLog mluví.",
     "defaultCraft": "Výchozí druh",
+    "defaultNeedleMetric": "Výchozí jednotka velikosti",
+    "needleMetricMm": "mm",
+    "needleMetricUs": "US velikosti",
     "holdTimeToAdvance": "Délka přidržení pro další řádek",
     "cloudTitle": "Záloha v cloudu",
     "cloudSub": "Vždy dobrovolné.",

@@ -23,6 +23,7 @@ import {useLibraryStore} from '../../store/libraryStore'
 import type {StitchInstance, Craft, StitchDef, LibraryRow, LibrarySequence, LibraryPattern, RowSegment} from '../../types'
 import RepeatRowBody from '../../components/RepeatRow/RepeatRowBody'
 import {StitchTile} from '../../components/RepeatRow/RepeatTiles'
+import {KNIT_SIZES, CROCHET_SIZES, KNIT_NEEDLE_TYPES} from '../../tokens/needleSizes'
 import {
     appendStitchPreservingSegments,
     expandStitches,
@@ -37,50 +38,6 @@ const YARN_WEIGHTS = ['Lace', 'Fingering', 'Sport', 'DK', 'Worsted', 'Aran', 'Bu
 const YARN_COLORS = ['#9C3D2E', '#D4923B', '#3F6B4A', '#8B5CF6', '#3B82F6', '#EC4899', '#F59E0B', '#6EE7B7']
 const PART_COLORS = ['#9C3D2E', '#D4923B', '#3F6B4A', '#7A5A8C', '#3B5B7A', '#C2547B']
 const MAX_NAME = 60
-
-type NeedleEntry = { mm: string; us: string; typical: string }
-const KNIT_SIZES: NeedleEntry[] = [
-    {mm: '1.5', us: '', typical: 'Lace'},
-    {mm: '1.75', us: '', typical: 'Lace'},
-    {mm: '2.0', us: 'US 0', typical: 'Lace'},
-    {mm: '2.25', us: 'US 1', typical: 'Lace'},
-    {mm: '2.5', us: '', typical: 'Lace'},
-    {mm: '2.75', us: 'US 2', typical: 'Fingering'},
-    {mm: '3.0', us: '', typical: 'Fingering'},
-    {mm: '3.25', us: 'US 3', typical: 'Sport'},
-    {mm: '3.5', us: 'US 4', typical: 'Sport'},
-    {mm: '3.75', us: 'US 5', typical: 'DK'},
-    {mm: '4.0', us: 'US 6', typical: 'DK'},
-    {mm: '4.5', us: 'US 7', typical: 'Worsted'},
-    {mm: '5.0', us: 'US 8', typical: 'Worsted'},
-    {mm: '5.5', us: 'US 9', typical: 'Aran'},
-    {mm: '6.0', us: 'US 10', typical: 'Bulky'},
-    {mm: '6.5', us: 'US 10.5', typical: 'Bulky'},
-    {mm: '7.0', us: '', typical: 'Bulky'},
-    {mm: '8.0', us: 'US 11', typical: 'Chunky'},
-    {mm: '9.0', us: 'US 13', typical: 'Super Chunky'},
-    {mm: '10.0', us: 'US 15', typical: 'Jumbo'},
-    {mm: '12.0', us: 'US 17', typical: 'Jumbo'},
-    {mm: '15.0', us: 'US 19', typical: 'Jumbo'},
-]
-const CROCHET_SIZES: NeedleEntry[] = [
-    {mm: '2.25', us: 'B/1', typical: 'Lace'},
-    {mm: '2.75', us: 'C/2', typical: 'Fingering'},
-    {mm: '3.25', us: 'D/3', typical: 'Sport'},
-    {mm: '3.5', us: 'E/4', typical: 'Sport'},
-    {mm: '3.75', us: 'F/5', typical: 'DK'},
-    {mm: '4.0', us: 'G/6', typical: 'DK'},
-    {mm: '4.5', us: '7', typical: 'Worsted'},
-    {mm: '5.0', us: 'H/8', typical: 'Worsted'},
-    {mm: '5.5', us: 'I/9', typical: 'Aran'},
-    {mm: '6.0', us: 'J/10', typical: 'Bulky'},
-    {mm: '6.5', us: 'K/10.5', typical: 'Bulky'},
-    {mm: '8.0', us: 'L/11', typical: 'Chunky'},
-    {mm: '9.0', us: 'M/13', typical: 'Chunky'},
-    {mm: '10.0', us: 'N/15', typical: 'Jumbo'},
-    {mm: '12.0', us: 'P/Q', typical: 'Jumbo'},
-]
-const KNIT_NEEDLE_TYPES = ['Straight', 'Circular', 'DPN']
 
 type DraftPart = {
     id: string; name: string; color: string; notes?: string
@@ -152,6 +109,7 @@ const Step1 = forwardRef<Step1Handle, {
 }>(function Step1({draft, onChange, requiredError = false}, ref) {
     const { t } = useTranslation()
     const {colors, fonts, fontSize, spacing, radius} = useTheme()
+    const needleUnit = useSettingsStore((s) => s.needleSizeUnit)
     const scrollRef = useRef<ScrollView>(null)
     const nameY = useRef(0)
     const len = draft.name.length
@@ -390,24 +348,45 @@ const Step1 = forwardRef<Step1Handle, {
                                 </View>
                                 <View style={{flex: 1}}>
                                     <View style={{flexDirection: 'row', alignItems: 'baseline', gap: 4}}>
-                                        <Text style={{
-                                            fontFamily: fonts.display,
-                                            fontSize: 28,
-                                            color: colors.ink,
-                                            lineHeight: 32
-                                        }}>{entry.mm}</Text>
-                                        <Text style={{
-                                            fontFamily: fonts.mono,
-                                            fontSize: 12,
-                                            color: colors.inkSoft,
-                                            fontWeight: '600'
-                                        }}>mm</Text>
-                                        <Text style={{
-                                            fontFamily: fonts.mono,
-                                            fontSize: 10,
-                                            color: colors.inkMute,
-                                            marginLeft: 4
-                                        }}>· {entry.us}</Text>
+                                        {needleUnit === 'us' && entry.us ? (
+                                            <>
+                                                <Text style={{
+                                                    fontFamily: fonts.display,
+                                                    fontSize: 28,
+                                                    color: colors.ink,
+                                                    lineHeight: 32
+                                                }}>{entry.us}</Text>
+                                                <Text style={{
+                                                    fontFamily: fonts.mono,
+                                                    fontSize: 10,
+                                                    color: colors.inkMute,
+                                                    marginLeft: 4
+                                                }}>· {entry.mm} mm</Text>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Text style={{
+                                                    fontFamily: fonts.display,
+                                                    fontSize: 28,
+                                                    color: colors.ink,
+                                                    lineHeight: 32
+                                                }}>{entry.mm}</Text>
+                                                <Text style={{
+                                                    fontFamily: fonts.mono,
+                                                    fontSize: 12,
+                                                    color: colors.inkSoft,
+                                                    fontWeight: '600'
+                                                }}>mm</Text>
+                                                {entry.us ? (
+                                                    <Text style={{
+                                                        fontFamily: fonts.mono,
+                                                        fontSize: 10,
+                                                        color: colors.inkMute,
+                                                        marginLeft: 4
+                                                    }}>· {entry.us}</Text>
+                                                ) : null}
+                                            </>
+                                        )}
                                     </View>
                                     <Text style={{
                                         fontFamily: fonts.mono,

@@ -11,7 +11,7 @@ import { languageLabel } from '../i18n/languages'
 import Screen from '../components/ui/Screen'
 import AppBar from '../components/ui/AppBar'
 import Icon from '../components/ui/Icon'
-import type { Theme, Craft } from '../types'
+import type { Theme, Craft, NeedleUnit } from '../types'
 
 function SectionLabel({ children }: { children: string }) {
   const { colors, fonts } = useTheme()
@@ -201,6 +201,45 @@ function CraftChips({ value, onChange }: { value: Craft; onChange: (c: Craft) =>
   )
 }
 
+function NeedleUnitChips({ value, onChange }: { value: NeedleUnit; onChange: (u: NeedleUnit) => void }) {
+  const { t } = useTranslation()
+  const { colors, fonts, radius } = useTheme()
+  const options: { id: NeedleUnit; label: string }[] = [
+    { id: 'mm', label: t('settings.needleMetricMm') },
+    { id: 'us', label: t('settings.needleMetricUs') },
+  ]
+  return (
+    <View style={[styles.chipRow, { backgroundColor: colors.card, borderColor: colors.rule, borderRadius: radius.md }]}>
+      {options.map((opt) => {
+        const active = opt.id === value
+        return (
+          <Pressable
+            key={opt.id}
+            onPress={() => onChange(opt.id)}
+            style={[
+              styles.craftChip,
+              {
+                backgroundColor: active ? colors.brick : colors.cream2,
+                borderRadius: radius.full,
+              },
+            ]}
+          >
+            <Text style={{
+              fontFamily: fonts.mono,
+              fontSize: 12,
+              fontWeight: '700',
+              color: active ? '#FBF6EC' : colors.inkSoft,
+              letterSpacing: 0.3,
+            }}>
+              {opt.label}
+            </Text>
+          </Pressable>
+        )
+      })}
+    </View>
+  )
+}
+
 function MiniRow({ icon, label, accent, last, onPress }: { icon: string; label: string; accent?: string; last?: boolean; onPress?: () => void }) {
   const { colors, fonts, fontSize } = useTheme()
   return (
@@ -220,13 +259,16 @@ export default function SettingsScreen() {
   const { colors, fonts, fontSize, spacing, radius } = useTheme()
   const theme         = useSettingsStore((s) => s.theme)
   const language      = useSettingsStore((s) => s.language)
-  const holdTimeMs    = useSettingsStore((s) => s.holdTimeMs)
-  const defaultCraft  = useSettingsStore((s) => s.defaultCraft)
-  const setTheme         = useSettingsStore((s) => s.setTheme)
-  const setHoldTimeMs    = useSettingsStore((s) => s.setHoldTimeMs)
-  const setDefaultCraft  = useSettingsStore((s) => s.setDefaultCraft)
+  const holdTimeMs      = useSettingsStore((s) => s.holdTimeMs)
+  const defaultCraft    = useSettingsStore((s) => s.defaultCraft)
+  const needleSizeUnit  = useSettingsStore((s) => s.needleSizeUnit)
+  const setTheme            = useSettingsStore((s) => s.setTheme)
+  const setHoldTimeMs       = useSettingsStore((s) => s.setHoldTimeMs)
+  const setDefaultCraft     = useSettingsStore((s) => s.setDefaultCraft)
+  const setNeedleSizeUnit   = useSettingsStore((s) => s.setNeedleSizeUnit)
   const [holdOpen, setHoldOpen]   = useState(false)
   const [craftOpen, setCraftOpen] = useState(false)
+  const [unitOpen, setUnitOpen]   = useState(false)
 
   const shareSkein = async () => {
     try {
@@ -278,6 +320,15 @@ export default function SettingsScreen() {
             onPress={() => setCraftOpen((v) => !v)}
           />
           {craftOpen && <CraftChips value={defaultCraft} onChange={setDefaultCraft}/>}
+          <SettingsRow
+            icon="needle"
+            iconColor={colors.mustardDk}
+            title={t('settings.defaultNeedleMetric')}
+            value={needleSizeUnit === 'mm' ? t('settings.needleMetricMm') : t('settings.needleMetricUs')}
+            expanded={unitOpen}
+            onPress={() => setUnitOpen((v) => !v)}
+          />
+          {unitOpen && <NeedleUnitChips value={needleSizeUnit} onChange={setNeedleSizeUnit}/>}
           <SettingsRow
             icon="bulb"
             iconColor={colors.mustardDk}

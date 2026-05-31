@@ -59,8 +59,9 @@
     "finished": "Finished"
   },
   "projectCard": {
-    "rowOf": "Row {{current}} / {{total}}",
-    "rowOfUnknown": "Row {{current}} / ?"
+    "doneTag": "DONE",
+    "parts_one": "{{count}} part",
+    "parts_other": "{{count}} parts"
   },
   "library": {
     "title": "Library",
@@ -95,6 +96,9 @@
     "languagePickerTitle": "Choose language",
     "languagePickerSub": "Pick the language YarnLog speaks to you in.",
     "defaultCraft": "Default craft",
+    "defaultNeedleMetric": "Default size unit",
+    "needleMetricMm": "mm",
+    "needleMetricUs": "US sizes",
     "holdTimeToAdvance": "Hold time to advance",
     "cloudTitle": "Cloud backup",
     "cloudSub": "Totally optional. Always.",
