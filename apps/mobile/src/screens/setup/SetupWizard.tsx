@@ -2529,38 +2529,75 @@ function Step4({draft, onChange, onJumpToStep3}: {
 }
 
 // ── Root wizard ─────────────────────────────────────────────────
-export default function SetupWizard() {
+type SetupWizardProps = {
+    projectId?: string
+}
+
+export default function SetupWizard({ projectId }: SetupWizardProps = {}) {
     const { t } = useTranslation()
     const {colors, fonts, spacing, radius} = useTheme()
     const router = useRouter()
     const defaultCraft = useSettingsStore((s) => s.defaultCraft)
     const markWelcomeSeen = useSettingsStore((s) => s.markWelcomeSeen)
     const addProject = useProjectStore((s) => s.addProject)
+    const updateProject = useProjectStore((s) => s.updateProject)
+    const existing = useProjectStore((s) => projectId ? s.projects.find((p) => p.id === projectId) : undefined)
+    const isEditing = !!existing
 
     const [step, setStep] = useState(0)
     const [triedNext, setTriedNext] = useState(false)
     const [step3Focus, setStep3Focus] = useState<Step3Focus | null>(null)
     const step1Ref = useRef<Step1Handle>(null)
-    const [draft, setDraft] = useState<Draft>({
-        name: '',
-        craft: defaultCraft,
-        yarnWeight: '',
-        needleSize: '4.5',
-        needleType: 'Straight',
-        yarnColor: '#9C3D2E',
-        notes: '',
-        parts: [
-            {
-                id: uuid4(),
-                name: t('wizard.mainPart'),
-                color: PART_COLORS[0]!,
-                loop: false,
-                sequences: [
-                    {id: uuid4(), name: t('wizard.mainSequence'), rows: [], totalRepeats: 1, loop: false},
-                ],
-            },
-        ],
-    })
+    const [draft, setDraft] = useState<Draft>(() => existing
+        ? {
+            name: existing.name,
+            craft: existing.craft,
+            yarnWeight: existing.yarnWeight,
+            needleSize: existing.needleSize,
+            needleType: existing.needleType ?? 'Straight',
+            yarnColor: existing.yarnColor,
+            notes: existing.notes,
+            parts: existing.parts.map((p) => ({
+                id: p.id,
+                name: p.name,
+                color: p.color,
+                notes: p.notes,
+                loop: p.loop,
+                sequences: p.sequences.map((s) => ({
+                    id: s.id,
+                    name: s.name,
+                    totalRepeats: s.totalRepeats,
+                    loop: s.loop,
+                    rows: s.rows.map((r) => ({
+                        id: r.id,
+                        label: r.label,
+                        stitches: r.stitches,
+                        segments: r.segments,
+                    })),
+                })),
+            })),
+            partsCustomized: true,
+        }
+        : {
+            name: '',
+            craft: defaultCraft,
+            yarnWeight: '',
+            needleSize: '4.5',
+            needleType: 'Straight',
+            yarnColor: '#9C3D2E',
+            notes: '',
+            parts: [
+                {
+                    id: uuid4(),
+                    name: t('wizard.mainPart'),
+                    color: PART_COLORS[0]!,
+                    loop: false,
+                    sequences: [
+                        {id: uuid4(), name: t('wizard.mainSequence'), rows: [], totalRepeats: 1, loop: false},
+                    ],
+                },
+            ],
+        })
 
     const STEP_META = [
         { label: t('wizard.step1Label'), title: t('wizard.step1Title'), sub: t('wizard.step1Sub') },
@@ -2586,6 +2623,20 @@ export default function SetupWizard() {
     }
 
     const finish = () => {
+        if (isEditing && existing) {
+            updateProject(existing.id, {
+                name: draft.name,
+                craft: draft.craft,
+                yarnWeight: draft.yarnWeight,
+                needleSize: draft.needleSize,
+                needleType: draft.needleType || undefined,
+                yarnColor: draft.yarnColor,
+                notes: draft.notes,
+                parts: draft.parts,
+            })
+            router.back()
+            return
+        }
         const id = uuid4()
         addProject({
             id,

@@ -114,7 +114,11 @@
     "emptyRow": "No stitches defined for this row.",
     "rowDone": "Row done",
     "holdSeconds": "hold {{seconds}} sec",
-    "catCaption": "press & hold so your cat can't ruin everything"
+    "catCaption": "press & hold so your cat can't ruin everything",
+    "editProject": "Edit project",
+    "markFinished": "Mark as finished",
+    "unmarkFinished": "Unmark as finished",
+    "switchPart": "Switch part"
   },
   "wizard": {
     "stepCounter": "{{current}}/{{total}}",

@@ -61,6 +61,11 @@ export const useProjectStore = create<ProjectStore>()(
                 p.currentSequenceIndex = nextSeqIdx
                 p.currentRepeat = 1
                 p.currentRowIndex = 0
+              } else if (part.loop) {
+                // looping part — restart from first sequence; user must mark part finished manually
+                p.currentSequenceIndex = 0
+                p.currentRepeat = 1
+                p.currentRowIndex = 0
               } else {
                 // done with part — advance to next part
                 const nextPartIdx = p.currentPartIndex + 1
@@ -88,6 +93,7 @@ export const useProjectStore = create<ProjectStore>()(
           const idx = s.projects.findIndex((p) => p.id === id)
           if (idx === -1) return s
           const p = { ...s.projects[idx] }
+          const currentPart = p.parts[p.currentPartIndex]
 
           if (p.currentRowIndex > 0) {
             p.currentRowIndex--
@@ -101,6 +107,13 @@ export const useProjectStore = create<ProjectStore>()(
             const prevSeq = part?.sequences[p.currentSequenceIndex]
             p.currentRepeat = prevSeq?.totalRepeats ?? 1
             p.currentRowIndex = (prevSeq?.rows.length ?? 1) - 1
+          } else if (currentPart?.loop) {
+            // looping part — wrap to last sequence's last repeat's last row
+            const lastSeqIdx = currentPart.sequences.length - 1
+            const lastSeq = currentPart.sequences[lastSeqIdx]
+            p.currentSequenceIndex = lastSeqIdx
+            p.currentRepeat = lastSeq?.totalRepeats ?? 1
+            p.currentRowIndex = (lastSeq?.rows.length ?? 1) - 1
           } else if (p.currentPartIndex > 0) {
             p.currentPartIndex--
             const prevPart = p.parts[p.currentPartIndex]

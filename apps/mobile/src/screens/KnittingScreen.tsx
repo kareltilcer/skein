@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react'
+import React, { useMemo, useState } from 'react'
 import { View, Text, ScrollView, StyleSheet } from 'react-native'
 
 import { useRouter } from 'expo-router'
@@ -13,6 +13,8 @@ import ProgressBar from '../components/ui/ProgressBar'
 import HoldButton from '../components/HoldButton'
 import StitchGlyph from '../components/StitchGlyph'
 import Icon from '../components/ui/Icon'
+import PartMenu from '../components/PartMenu'
+import PartPicker from '../components/pickers/PartPicker'
 import RepeatRowBody from '../components/RepeatRow/RepeatRowBody'
 import type { StitchInstance } from '../types'
 
@@ -26,7 +28,7 @@ function StitchChipBig({ stitchId, color }: { stitchId: string; color: string })
   return (
     <View style={[styles.bigChip, { backgroundColor: color, borderRadius: 18, shadowColor: color }]}>
       <StitchGlyph symbol={def.symbol} color="#FBF6EC" size={38} strokeWidth={2.6}/>
-      <Text style={{ fontFamily: fonts.mono, fontSize: 13, color: '#FBF6EC', fontWeight: '700', letterSpacing: 0.3 }}>
+      <Text style={{ fontFamily: fonts.mono, fontSize: 13, color: '#FBF6EC', fontWeight: '700', letterSpacing: 0.3, textAlign: 'center', alignSelf: 'stretch' }}>
         {def.abbr}
       </Text>
     </View>
@@ -55,6 +57,7 @@ export default function KnittingScreen({ projectId }: Props) {
   const retreatRow = useProjectStore((s) => s.retreatRow)
   const holdTimeMs = useSettingsStore((s) => s.holdTimeMs)
   const stitchMap = useStitchMap()
+  const [partPickerOpen, setPartPickerOpen] = useState(false)
 
   if (!project) {
     return (
@@ -101,7 +104,7 @@ export default function KnittingScreen({ projectId }: Props) {
             {project.name}{part ? ` · ${part.name}` : ''}
           </Text>
         </View>
-        <IconBtn name="more"/>
+        <PartMenu projectId={project.id} onSwitchPart={() => setPartPickerOpen(true)}/>
       </View>
 
       {/* sequence + repeat indicator */}
@@ -218,6 +221,10 @@ export default function KnittingScreen({ projectId }: Props) {
           {t('knitting.catCaption')}
         </Text>
       </View>
+
+      {partPickerOpen && (
+        <PartPicker project={project} onClose={() => setPartPickerOpen(false)}/>
+      )}
     </Screen>
   )
 }

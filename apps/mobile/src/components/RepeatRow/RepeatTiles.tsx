@@ -76,6 +76,7 @@ export function StitchTile({
         <Text style={{
           fontFamily: fonts.mono, fontSize: 8, color: c, fontWeight: '700',
           lineHeight: 9, letterSpacing: -0.2, marginTop: 1,
+          textAlign: 'center', alignSelf: 'stretch', paddingHorizontal: 2,
         }}>{abbr}</Text>
       </View>
     </View>

@@ -114,7 +114,11 @@
     "emptyRow": "Keine Maschen für diese Reihe.",
     "rowDone": "Reihe fertig",
     "holdSeconds": "halte {{seconds}} s",
-    "catCaption": "drücken & halten, damit die Katze nichts kaputt macht"
+    "catCaption": "drücken & halten, damit die Katze nichts kaputt macht",
+    "editProject": "Projekt bearbeiten",
+    "markFinished": "Als fertig markieren",
+    "unmarkFinished": "Fertig-Markierung aufheben",
+    "switchPart": "Teil wechseln"
   },
   "wizard": {
     "stepCounter": "{{current}}/{{total}}",

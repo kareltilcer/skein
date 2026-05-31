@@ -48,5 +48,6 @@ const styles = StyleSheet.create({
   abbr: {
     color: '#2B1810',
     fontWeight: '600',
+    textAlign: 'center',
   },
 })

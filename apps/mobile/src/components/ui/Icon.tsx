@@ -7,6 +7,7 @@ type IconName =
   | 'edit' | 'trash' | 'yarn' | 'needle' | 'loop' | 'refresh' | 'save'
   | 'user' | 'globe' | 'cloud' | 'play' | 'pause' | 'repeat' | 'grid'
   | 'grip' | 'sparkle' | 'settings' | 'library' | 'backspace'
+  | 'flag' | 'undo' | 'layers'
 
 type Props = {
   name: IconName
@@ -53,6 +54,9 @@ export default function Icon({ name, size = 22, color = 'currentColor', stroke =
     settings: <><Circle cx="12" cy="12" r="3" {...p}/><Path d="M12 4 V6 M12 18 V20 M4 12 H6 M18 12 H20 M6 6 L7.5 7.5 M16.5 16.5 L18 18 M6 18 L7.5 16.5 M16.5 7.5 L18 6" {...p}/></>,
     library:  <><Line x1="6" y1="4" x2="6" y2="20" {...p}/><Line x1="10" y1="4" x2="10" y2="20" {...p}/><Path d="M14 4 L18 20" {...p}/></>,
     backspace: <><Path d="M20 7 H9 L3 12 L9 17 H20 Z" {...p}/><Line x1="14" y1="10" x2="18" y2="14" {...p}/><Line x1="18" y1="10" x2="14" y2="14" {...p}/></>,
+    flag:     <><Line x1="6" y1="3" x2="6" y2="21" {...p}/><Path d="M6 4 H18 L14 8 L18 12 H6" {...p}/></>,
+    undo:     <><Path d="M4 10 A 7 7 0 0 1 18 10 V14" {...p}/><Polyline points="4,6 4,10 8,10" {...p}/></>,
+    layers:   <><Path d="M12 4 L20 9 L12 14 L4 9 Z" {...p}/><Path d="M4 13 L12 18 L20 13" {...p}/><Path d="M4 17 L12 22 L20 17" {...p}/></>,
   }
 
   return (

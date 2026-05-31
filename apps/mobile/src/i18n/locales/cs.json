@@ -130,7 +130,11 @@
     "emptyRow": "Pro tento řádek nejsou žádná oka.",
     "rowDone": "Řádek hotov",
     "holdSeconds": "drž {{seconds}} s",
-    "catCaption": "stiskni a drž, ať to kočka nezkazí"
+    "catCaption": "stiskni a drž, ať to kočka nezkazí",
+    "editProject": "Upravit projekt",
+    "markFinished": "Označit jako hotové",
+    "unmarkFinished": "Zrušit označení hotové",
+    "switchPart": "Přepnout část"
   },
   "wizard": {
     "stepCounter": "{{current}}/{{total}}",
