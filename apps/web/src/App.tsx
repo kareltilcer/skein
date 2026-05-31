@@ -1,7 +1,7 @@
 export default function App() {
   return (
     <main>
-      <h1>Skein</h1>
+      <h1>YarnLog</h1>
     </main>
   )
 }
