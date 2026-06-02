@@ -216,6 +216,7 @@ export const useLibraryStore = create<LibraryStore>()(
     {
       name: 'skein-library',
       storage: createJSONStorage(() => AsyncStorage),
+      version: 0,
       /**
        * Custom merge: zustand's default is `{...currentState, ...persistedState}` which
        * lets a stale empty `rows: []` in AsyncStorage silently clobber the seed data.

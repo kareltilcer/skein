@@ -42,6 +42,16 @@ export const useSettingsStore = create<SettingsStore>()(
     {
       name: 'skein-settings',
       storage: createJSONStorage(() => AsyncStorage),
+      version: 0,
+      partialize: (s) => ({
+        theme:            s.theme,
+        language:         s.language,
+        defaultCraft:     s.defaultCraft,
+        needleSizeUnit:   s.needleSizeUnit,
+        holdTimeMs:       s.holdTimeMs,
+        hasSeenWelcome:   s.hasSeenWelcome,
+        recentStitchIds:  s.recentStitchIds,
+      }),
     },
   ),
 )

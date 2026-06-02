@@ -42,6 +42,7 @@ export const useCustomStitchStore = create<CustomStitchStore>()(
     {
       name: 'skein-custom-stitches',
       storage: createJSONStorage(() => AsyncStorage),
+      version: 0,
     },
   ),
 )

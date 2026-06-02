@@ -139,6 +139,7 @@ export const useProjectStore = create<ProjectStore>()(
     {
       name: 'skein-projects',
       storage: createJSONStorage(() => AsyncStorage),
+      version: 0,
     },
   ),
 )
