@@ -11,6 +11,9 @@ import AppBar from '../components/ui/AppBar'
 import Icon from '../components/ui/Icon'
 import StitchGlyph from '../components/StitchGlyph'
 import { useStitchMap } from '../hooks/useStitchMap'
+import NewRowScreen from './library/NewRowScreen'
+import NewSequenceScreen from './library/NewSequenceScreen'
+import NewPatternScreen from './library/NewPatternScreen'
 import type { Craft, LibrarySequence, LibraryPattern, LibraryRow } from '../types'
 
 type Tab = 'pat' | 'seq' | 'row'
@@ -131,6 +134,9 @@ export default function LibraryScreen() {
   const [tab, setTab] = useState<Tab>('seq')
   const [craft, setCraft] = useState<CraftFilter>(defaultCraft)
   const [query, setQuery] = useState('')
+  const [openCreator, setOpenCreator] = useState<Tab | null>(null)
+
+  const modalCraft: Craft = craft === 'all' ? defaultCraft : craft
 
   const TABS: { id: Tab; label: string }[] = [
     { id: 'pat', label: t('library.tabPatterns')  },
@@ -181,7 +187,10 @@ export default function LibraryScreen() {
         </View>
 
         {/* New CTA */}
-        <Pressable style={{ borderRadius: radius.md, overflow: 'hidden' }}>
+        <Pressable
+          onPress={() => setOpenCreator(tab)}
+          style={{ borderRadius: radius.md, overflow: 'hidden' }}
+        >
           {({ pressed }) => (
             <LinearGradient
               colors={[colors.brick, colors.brickDk]}
@@ -270,6 +279,22 @@ export default function LibraryScreen() {
             : <EmptyState/>
         )}
       </ScrollView>
+
+      <NewRowScreen
+        visible={openCreator === 'row'}
+        onClose={() => setOpenCreator(null)}
+        defaultCraft={modalCraft}
+      />
+      <NewSequenceScreen
+        visible={openCreator === 'seq'}
+        onClose={() => setOpenCreator(null)}
+        defaultCraft={modalCraft}
+      />
+      <NewPatternScreen
+        visible={openCreator === 'pat'}
+        onClose={() => setOpenCreator(null)}
+        defaultCraft={modalCraft}
+      />
     </Screen>
   )
 }
