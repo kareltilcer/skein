@@ -24,6 +24,7 @@ import {
 import type {
   Craft, LibraryRow, LibrarySequence, Row, StitchDef, StitchInstance,
 } from '../../types'
+import { uuid } from '../../utils/uuid'
 
 const DraggableFlatList = _DraggableFlatList as any
 const ScaleDecorator = _ScaleDecorator as any
@@ -35,10 +36,6 @@ type Props = {
   defaultCraft?: Craft
 }
 
-function uuid4() {
-  return Math.random().toString(36).slice(2) + Date.now().toString(36)
-}
-
 function totalStitches(stitches: StitchInstance[]) {
   return stitches.reduce((a, s) => a + s.count, 0)
 }
@@ -47,7 +44,7 @@ const STITCH_BRICK   = new Set(['k', 'sl', 'kfb', 'm1'])
 const STITCH_MUSTARD = new Set(['p', 'p2tog', 'mb'])
 
 function makeEmptyRow(label: string): Row {
-  return { id: uuid4(), label, stitches: [] }
+  return { id: uuid(), label, stitches: [] }
 }
 
 export default function NewSequenceScreen({ visible, onClose, defaultCraft = 'knit' }: Props) {
@@ -130,7 +127,7 @@ export default function NewSequenceScreen({ visible, onClose, defaultCraft = 'kn
 
   const addRowFromLib = (libRow: LibraryRow) => {
     const newRow: Row = {
-      id: uuid4(),
+      id: uuid(),
       label: libRow.label,
       stitches: libRow.stitches,
       ...(libRow.segments ? { segments: libRow.segments } : {}),
@@ -170,7 +167,7 @@ export default function NewSequenceScreen({ visible, onClose, defaultCraft = 'kn
   const handleSave = () => {
     if (!ready) return
     const seq: LibrarySequence = {
-      id: uuid4(),
+      id: uuid(),
       name: name.trim(),
       craft,
       rows: rows.filter(r => r.stitches.length > 0),

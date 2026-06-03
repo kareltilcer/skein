@@ -15,6 +15,7 @@ import { useLibraryStore } from '../../store/libraryStore'
 import { useSettingsStore } from '../../store/settingsStore'
 import { useStitchMap } from '../../hooks/useStitchMap'
 import { STITCHES } from '../../tokens/stitches'
+import { uuid } from '../../utils/uuid'
 import Icon from '../../components/ui/Icon'
 import Btn from '../../components/ui/Btn'
 import StitchGlyph from '../../components/StitchGlyph'
@@ -69,9 +70,6 @@ type Marking = ActiveRow & { step: 'start' | 'end'; start: number | null }
 const STITCH_BRICK   = new Set(['k', 'sl', 'kfb', 'm1'])
 const STITCH_MUSTARD = new Set(['p', 'p2tog', 'mb'])
 
-function uuid4() {
-  return Math.random().toString(36).slice(2) + Date.now().toString(36)
-}
 
 export default function NewPatternScreen({ visible, onClose, defaultCraft = 'knit' }: Props) {
   const { t } = useTranslation()
@@ -121,7 +119,7 @@ export default function NewPatternScreen({ visible, onClose, defaultCraft = 'kni
     if (visible) {
       setName('')
       setCraft(defaultCraft)
-      const first: DraftPart = { id: uuid4(), name: t('libraryCreate.partDefaultLabel', { n: 1 }), sequences: [] }
+      const first: DraftPart = { id: uuid(), name: t('libraryCreate.partDefaultLabel', { n: 1 }), sequences: [] }
       setParts([first])
       setActivePartIdx(0)
       setActiveRow(null)
@@ -175,7 +173,7 @@ export default function NewPatternScreen({ visible, onClose, defaultCraft = 'kni
   }
 
   const addPart = () => {
-    const newPart: DraftPart = { id: uuid4(), name: t('libraryCreate.partDefaultLabel', { n: parts.length + 1 }), sequences: [] }
+    const newPart: DraftPart = { id: uuid(), name: t('libraryCreate.partDefaultLabel', { n: parts.length + 1 }), sequences: [] }
     setParts(ps => [...ps, newPart])
     setActivePartIdx(parts.length)
     setFocusedSeq(null)
@@ -270,7 +268,7 @@ export default function NewPatternScreen({ visible, onClose, defaultCraft = 'kni
     if (activePartIdx == null) return
     const partN = parts[activePartIdx]!
     const newSeq: DraftSequence = {
-      id: uuid4(),
+      id: uuid(),
       name: t('wizard.sequenceLabel', { n: partN.sequences.length + 1 }),
       rows: [], totalRepeats: 1, loop: false,
     }
@@ -282,8 +280,8 @@ export default function NewPatternScreen({ visible, onClose, defaultCraft = 'kni
   const addSeqFromLib = (libSeq: LibrarySequence) => {
     if (activePartIdx == null) return
     const newSeq: DraftSequence = {
-      id: uuid4(), name: libSeq.name,
-      rows: libSeq.rows.map(r => ({ id: uuid4(), label: r.label, stitches: r.stitches, segments: r.segments })),
+      id: uuid(), name: libSeq.name,
+      rows: libSeq.rows.map(r => ({ id: uuid(), label: r.label, stitches: r.stitches, segments: r.segments })),
       totalRepeats: libSeq.totalRepeats, loop: libSeq.loop,
     }
     setParts(ps => ps.map((p, i) => i === activePartIdx ? { ...p, sequences: [...p.sequences, newSeq] } : p))
@@ -296,8 +294,8 @@ export default function NewPatternScreen({ visible, onClose, defaultCraft = 'kni
       .map(id => librarySequences.find(s => s.id === id))
       .filter((s): s is LibrarySequence => Boolean(s))
       .map(libSeq => ({
-        id: uuid4(), name: libSeq.name,
-        rows: libSeq.rows.map(r => ({ id: uuid4(), label: r.label, stitches: r.stitches, segments: r.segments })),
+        id: uuid(), name: libSeq.name,
+        rows: libSeq.rows.map(r => ({ id: uuid(), label: r.label, stitches: r.stitches, segments: r.segments })),
         totalRepeats: libSeq.totalRepeats, loop: libSeq.loop,
       }))
     setParts(ps => ps.map((p, i) => i === activePartIdx ? { ...p, sequences: [...p.sequences, ...newSeqs] } : p))
@@ -335,7 +333,7 @@ export default function NewPatternScreen({ visible, onClose, defaultCraft = 'kni
   const addRow = (seqIdx: number) => {
     if (activePartIdx == null || !part) return
     const seq = part.sequences[seqIdx]!
-    const newRow: DraftRow = { id: uuid4(), label: t('wizard.rowLabel', { n: seq.rows.length + 1 }), stitches: [] }
+    const newRow: DraftRow = { id: uuid(), label: t('wizard.rowLabel', { n: seq.rows.length + 1 }), stitches: [] }
     const newRowIdx = seq.rows.length
     updateSeq(activePartIdx, seqIdx, { ...seq, rows: [...seq.rows, newRow] })
     setActiveRow({ partIdx: activePartIdx, seqIdx, rowIdx: newRowIdx })
@@ -345,7 +343,7 @@ export default function NewPatternScreen({ visible, onClose, defaultCraft = 'kni
   const addRowFromLib = (seqIdx: number, libRow: LibraryRow) => {
     if (activePartIdx == null || !part) return
     const seq = part.sequences[seqIdx]!
-    const newRow: DraftRow = { id: uuid4(), label: libRow.label, stitches: libRow.stitches, segments: libRow.segments }
+    const newRow: DraftRow = { id: uuid(), label: libRow.label, stitches: libRow.stitches, segments: libRow.segments }
     const newRowIdx = seq.rows.length
     updateSeq(activePartIdx, seqIdx, { ...seq, rows: [...seq.rows, newRow] })
     setActiveRow({ partIdx: activePartIdx, seqIdx, rowIdx: newRowIdx })
@@ -441,7 +439,7 @@ export default function NewPatternScreen({ visible, onClose, defaultCraft = 'kni
         const nonEmptyRows = ds.rows.filter(r => r.stitches.length > 0) as Row[]
         if (nonEmptyRows.length === 0) continue
         const seq: LibrarySequence = {
-          id: uuid4(),
+          id: uuid(),
           name: ds.name.trim() || t('libraryCreate.untitledSeq'),
           craft,
           rows: nonEmptyRows,
@@ -454,7 +452,7 @@ export default function NewPatternScreen({ visible, onClose, defaultCraft = 'kni
       }
     }
     const pat: LibraryPattern = {
-      id: uuid4(),
+      id: uuid(),
       name: name.trim(),
       craft,
       sequenceIds,

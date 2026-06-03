@@ -2,9 +2,10 @@ import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import type { CustomStitchDef, TileColorKey, CountsAs, Craft } from '../types'
+import { uuid } from '../utils/uuid'
 
 function uid() {
-  return 'custom_' + Math.random().toString(36).slice(2) + Date.now().toString(36)
+  return 'custom_' + uuid()
 }
 
 type NewCustomStitch = {

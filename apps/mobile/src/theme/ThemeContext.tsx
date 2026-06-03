@@ -28,14 +28,17 @@ export function ThemeProvider({
     () => ({ ...FontFamily, display: resolveDisplayFont(i18n.language) }),
     [i18n.language],
   )
-  const value: ThemeContextValue = {
-    theme,
-    colors: getColors(theme),
-    fonts,
-    fontSize: FontSize,
-    spacing: Spacing,
-    radius: Radius,
-  }
+  const value = useMemo<ThemeContextValue>(
+    () => ({
+      theme,
+      colors: getColors(theme),
+      fonts,
+      fontSize: FontSize,
+      spacing: Spacing,
+      radius: Radius,
+    }),
+    [theme, fonts],
+  )
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>
 }
 

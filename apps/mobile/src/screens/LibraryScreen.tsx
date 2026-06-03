@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useMemo, useState } from 'react'
 import { View, Text, ScrollView, TextInput, Pressable, StyleSheet } from 'react-native'
 
 import { LinearGradient } from 'expo-linear-gradient'
@@ -129,7 +129,9 @@ function EmptyState() {
 export default function LibraryScreen() {
   const { t } = useTranslation()
   const { colors, fonts, fontSize, spacing, radius } = useTheme()
-  const { sequences, patterns, rows } = useLibraryStore()
+  const sequences = useLibraryStore((s) => s.sequences)
+  const patterns  = useLibraryStore((s) => s.patterns)
+  const rows      = useLibraryStore((s) => s.rows)
   const defaultCraft = useSettingsStore((s) => s.defaultCraft)
   const [tab, setTab] = useState<Tab>('seq')
   const [craft, setCraft] = useState<CraftFilter>(defaultCraft)
@@ -144,18 +146,22 @@ export default function LibraryScreen() {
     { id: 'row', label: t('library.tabRows')      },
   ]
 
-  const filterCraft = <T extends { craft: Craft }>(items: T[]) =>
-    craft === 'all' ? items : items.filter((i) => i.craft === craft)
+  const { visibleSeqs, visiblePats, visibleRows } = useMemo(() => {
+    const filterCraft = <T extends { craft: Craft }>(items: T[]) =>
+      craft === 'all' ? items : items.filter((i) => i.craft === craft)
 
-  const filterQuery = <T extends { name?: string; label?: string }>(items: T[]) => {
-    if (!query.trim()) return items
     const q = query.toLowerCase()
-    return items.filter((i) => (i.name ?? i.label ?? '').toLowerCase().includes(q))
-  }
+    const filterQuery = <T extends { name?: string; label?: string }>(items: T[]) => {
+      if (!query.trim()) return items
+      return items.filter((i) => (i.name ?? i.label ?? '').toLowerCase().includes(q))
+    }
 
-  const visibleSeqs = filterQuery(filterCraft(sequences))
-  const visiblePats = filterQuery(filterCraft(patterns))
-  const visibleRows = filterQuery(filterCraft(rows.map((r) => ({ ...r, name: r.label }))))
+    return {
+      visibleSeqs: filterQuery(filterCraft(sequences)),
+      visiblePats: filterQuery(filterCraft(patterns)),
+      visibleRows: filterQuery(filterCraft(rows.map((r) => ({ ...r, name: r.label })))),
+    }
+  }, [sequences, patterns, rows, craft, query])
 
   const counts: Record<Tab, number> = {
     seq: visibleSeqs.length,

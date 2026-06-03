@@ -24,6 +24,7 @@ import type {StitchInstance, Craft, StitchDef, LibraryRow, LibrarySequence, Libr
 import RepeatRowBody from '../../components/RepeatRow/RepeatRowBody'
 import {StitchTile} from '../../components/RepeatRow/RepeatTiles'
 import {KNIT_SIZES, CROCHET_SIZES, KNIT_NEEDLE_TYPES} from '../../tokens/needleSizes'
+import { uuid } from '../../utils/uuid'
 import {
     appendStitchPreservingSegments,
     expandStitches,
@@ -66,9 +67,6 @@ type Draft = {
 const STITCH_BRICK   = new Set(['k', 'sl', 'kfb', 'm1'])
 const STITCH_MUSTARD = new Set(['p', 'p2tog', 'mb'])
 
-function uuid4() {
-    return Math.random().toString(36).slice(2) + Date.now().toString(36)
-}
 
 function usePartMeta() {
     const { t } = useTranslation()
@@ -541,12 +539,12 @@ function Step2({draft, onChange}: { draft: Draft; onChange: (d: Draft) => void }
     const confirmAdd = () => {
         if (!sheetName.trim()) return
         const newPart: DraftPart = {
-            id: uuid4(),
+            id: uuid(),
             name: sheetName.trim(),
             color: sheetColor,
             notes: sheetNotes.trim() || undefined,
             loop: false,
-            sequences: [{id: uuid4(), name: t('wizard.mainSequence'), rows: [], totalRepeats: 1, loop: false}],
+            sequences: [{id: uuid(), name: t('wizard.mainSequence'), rows: [], totalRepeats: 1, loop: false}],
         }
         // First explicit add: replace the implicit default "Main" part instead of appending
         const isFirstAdd = !draft.partsCustomized && draft.parts.length === 1
@@ -1016,7 +1014,7 @@ function Step3({draft, onChange, initialFocus, onFocusConsumed}: {
             setActiveRow(null)
         }
         onFocusConsumed?.()
-    }, [initialFocus])
+    }, [initialFocus, draft.parts, onFocusConsumed])
 
     const libraryRows      = useLibraryStore(s => s.rows)
     const librarySequences = useLibraryStore(s => s.sequences)
@@ -1070,7 +1068,7 @@ function Step3({draft, onChange, initialFocus, onFocusConsumed}: {
 
     const addRow = (seqIdx: number) => {
         const seq = part!.sequences[seqIdx]!
-        const newRow: DraftRow = {id: uuid4(), label: t('wizard.rowLabel', { n: seq.rows.length + 1 }), stitches: []}
+        const newRow: DraftRow = {id: uuid(), label: t('wizard.rowLabel', { n: seq.rows.length + 1 }), stitches: []}
         const newRowIdx = seq.rows.length
         updateSeq(activePart, seqIdx, {...seq, rows: [...seq.rows, newRow]})
         setActiveRow({partIdx: activePart, seqIdx, rowIdx: newRowIdx})
@@ -1079,7 +1077,7 @@ function Step3({draft, onChange, initialFocus, onFocusConsumed}: {
 
     const addRowFromLib = (seqIdx: number, libRow: LibraryRow) => {
         const seq = part!.sequences[seqIdx]!
-        const newRow: DraftRow = {id: uuid4(), label: libRow.label, stitches: libRow.stitches, segments: libRow.segments}
+        const newRow: DraftRow = {id: uuid(), label: libRow.label, stitches: libRow.stitches, segments: libRow.segments}
         const newRowIdx = seq.rows.length
         updateSeq(activePart, seqIdx, {...seq, rows: [...seq.rows, newRow]})
         setActiveRow({partIdx: activePart, seqIdx, rowIdx: newRowIdx})
@@ -1088,8 +1086,8 @@ function Step3({draft, onChange, initialFocus, onFocusConsumed}: {
 
     const addSeqFromLib = (libSeq: LibrarySequence) => {
         const newSeq: DraftSequence = {
-            id: uuid4(), name: libSeq.name,
-            rows: libSeq.rows.map(r => ({id: uuid4(), label: r.label, stitches: r.stitches, segments: r.segments})),
+            id: uuid(), name: libSeq.name,
+            rows: libSeq.rows.map(r => ({id: uuid(), label: r.label, stitches: r.stitches, segments: r.segments})),
             totalRepeats: libSeq.totalRepeats,
             loop: libSeq.loop,
         }
@@ -1103,8 +1101,8 @@ function Step3({draft, onChange, initialFocus, onFocusConsumed}: {
             .map(id => librarySequences.find(s => s.id === id))
             .filter((s): s is LibrarySequence => Boolean(s))
             .map(libSeq => ({
-                id: uuid4(), name: libSeq.name,
-                rows: libSeq.rows.map(r => ({id: uuid4(), label: r.label, stitches: r.stitches, segments: r.segments})),
+                id: uuid(), name: libSeq.name,
+                rows: libSeq.rows.map(r => ({id: uuid(), label: r.label, stitches: r.stitches, segments: r.segments})),
                 totalRepeats: libSeq.totalRepeats,
                 loop: libSeq.loop,
             }))
@@ -1160,7 +1158,7 @@ function Step3({draft, onChange, initialFocus, onFocusConsumed}: {
 
     const addSeq = () => {
         const newSeq: DraftSequence = {
-            id: uuid4(), name: t('wizard.sequenceLabel', { n: part!.sequences.length + 1 }),
+            id: uuid(), name: t('wizard.sequenceLabel', { n: part!.sequences.length + 1 }),
             rows: [], totalRepeats: 1, loop: false,
         }
         const updatedPart = {...part!, sequences: [...part!.sequences, newSeq]}
@@ -2182,8 +2180,8 @@ function Step4({draft, onChange, onJumpToStep3}: {
 
     const addSeqFromLib = (libSeq: LibrarySequence) => {
         const newSeq: DraftSequence = {
-            id: uuid4(), name: libSeq.name,
-            rows: libSeq.rows.map(r => ({...r, id: uuid4()})),
+            id: uuid(), name: libSeq.name,
+            rows: libSeq.rows.map(r => ({...r, id: uuid()})),
             totalRepeats: libSeq.totalRepeats,
             loop: libSeq.loop,
         }
@@ -2196,8 +2194,8 @@ function Step4({draft, onChange, onJumpToStep3}: {
             .map(id => librarySequences.find(s => s.id === id))
             .filter((s): s is LibrarySequence => Boolean(s))
             .map(libSeq => ({
-                id: uuid4(), name: libSeq.name,
-                rows: libSeq.rows.map(r => ({...r, id: uuid4()})),
+                id: uuid(), name: libSeq.name,
+                rows: libSeq.rows.map(r => ({...r, id: uuid()})),
                 totalRepeats: libSeq.totalRepeats,
                 loop: libSeq.loop,
             }))
@@ -2567,12 +2565,12 @@ export default function SetupWizard({ projectId }: SetupWizardProps = {}) {
             notes: '',
             parts: [
                 {
-                    id: uuid4(),
+                    id: uuid(),
                     name: t('wizard.mainPart'),
                     color: PART_COLORS[0]!,
                     loop: false,
                     sequences: [
-                        {id: uuid4(), name: t('wizard.mainSequence'), rows: [], totalRepeats: 1, loop: false},
+                        {id: uuid(), name: t('wizard.mainSequence'), rows: [], totalRepeats: 1, loop: false},
                     ],
                 },
             ],
@@ -2616,7 +2614,7 @@ export default function SetupWizard({ projectId }: SetupWizardProps = {}) {
             router.back()
             return
         }
-        const id = uuid4()
+        const id = uuid()
         addProject({
             id,
             name: draft.name,

@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useMemo, useState } from 'react'
 import { View, Text, ScrollView, Pressable, StyleSheet } from 'react-native'
 
 import { useRouter } from 'expo-router'
@@ -32,16 +32,20 @@ export default function HomeScreen() {
   const projects = useProjectStore((s) => s.projects)
   const [finishedOpen, setFinishedOpen] = useState(false)
 
-  const active   = projects.filter((p) => p.status === 'active')
-  const finished = projects.filter((p) => p.status === 'finished')
+  const { active, finished } = useMemo(() => ({
+    active:   projects.filter((p) => p.status === 'active'),
+    finished: projects.filter((p) => p.status === 'finished'),
+  }), [projects])
 
   const openProject = (p: Project) => router.push(`/project/${p.id}`)
   const goSetup     = () => router.push('/setup')
 
-  const subTitle =
+  const subTitle = useMemo(() =>
     t('home.subActive', { count: active.length })
     + (finished.length ? t('home.subFinishedSuffix', { count: finished.length }) : '')
-    + t('home.subTrail')
+    + t('home.subTrail'),
+    [t, active.length, finished.length],
+  )
 
   return (
     <Screen>

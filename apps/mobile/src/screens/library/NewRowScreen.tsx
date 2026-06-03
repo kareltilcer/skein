@@ -23,15 +23,12 @@ import {
 import type {
   Craft, LibraryRow, Row, StitchDef, StitchInstance,
 } from '../../types'
+import { uuid } from '../../utils/uuid'
 
 type Props = {
   visible: boolean
   onClose: () => void
   defaultCraft?: Craft
-}
-
-function uuid4() {
-  return Math.random().toString(36).slice(2) + Date.now().toString(36)
 }
 
 function totalStitches(stitches: StitchInstance[]) {
@@ -142,7 +139,7 @@ export default function NewRowScreen({ visible, onClose, defaultCraft = 'knit' }
   const handleSave = () => {
     if (!ready) return
     const newRow: LibraryRow = {
-      id: uuid4(),
+      id: uuid(),
       label: name.trim(),
       craft,
       stitches: row.stitches,

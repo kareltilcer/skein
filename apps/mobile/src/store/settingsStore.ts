@@ -42,16 +42,28 @@ export const useSettingsStore = create<SettingsStore>()(
     {
       name: 'skein-settings',
       storage: createJSONStorage(() => AsyncStorage),
-      version: 0,
+      version: 1,
       partialize: (s) => ({
-        theme:            s.theme,
-        language:         s.language,
-        defaultCraft:     s.defaultCraft,
-        needleSizeUnit:   s.needleSizeUnit,
-        holdTimeMs:       s.holdTimeMs,
-        hasSeenWelcome:   s.hasSeenWelcome,
-        recentStitchIds:  s.recentStitchIds,
+        theme:               s.theme,
+        language:             s.language,
+        languageInitialized:  s.languageInitialized,
+        defaultCraft:         s.defaultCraft,
+        needleSizeUnit:       s.needleSizeUnit,
+        holdTimeMs:           s.holdTimeMs,
+        hasSeenWelcome:       s.hasSeenWelcome,
+        recentStitchIds:      s.recentStitchIds,
       }),
+      migrate: (persistedState, fromVersion) => {
+        const s = (persistedState ?? {}) as Partial<Settings>
+        if (fromVersion < 1) {
+          // v0 partialize dropped `languageInitialized`. Anyone who had v0
+          // persisted state has already chosen (or accepted) a language —
+          // mark it initialized so the root-layout effect doesn't override
+          // their saved `language` with the OS-detected one on next boot.
+          return { ...s, languageInitialized: true }
+        }
+        return s
+      },
     },
   ),
 )

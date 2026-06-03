@@ -43,6 +43,7 @@ export default function PartMenu({ projectId, onSwitchPart }: Props) {
       router.push(`/setup?projectId=${projectId}`)
     } else if (key === 'finish') {
       updateProject(projectId, { status: finished ? 'active' : 'finished' })
+      setOpen(false)
     } else if (key === 'switch') {
       setOpen(false)
       onSwitchPart()
