@@ -43,7 +43,11 @@ export const useCustomStitchStore = create<CustomStitchStore>()(
     {
       name: 'skein-custom-stitches',
       storage: createJSONStorage(() => AsyncStorage),
-      version: 0,
+      version: 1,
+      migrate: (persistedState, _fromVersion) => {
+        // No schema changes yet; stub for future field additions.
+        return (persistedState ?? {}) as { customStitches?: CustomStitchDef[] }
+      },
     },
   ),
 )

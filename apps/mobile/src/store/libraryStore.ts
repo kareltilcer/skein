@@ -3,7 +3,7 @@ import { persist, createJSONStorage } from 'zustand/middleware'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import type { LibrarySequence, LibraryPattern, LibraryRow } from '../types'
 
-const SEED_SEQUENCES: LibrarySequence[] = [
+export const SEED_SEQUENCES: LibrarySequence[] = [
   {
     id: 'lib-seq-stockinette',
     name: 'Stockinette body',
@@ -90,7 +90,7 @@ const SEED_SEQUENCES: LibrarySequence[] = [
       { id: 'r3', label: 'sl st join',       stitches: [{ stitchId: 'slst', count: 1 }] },
       { id: 'r4', label: '(3dc, ch1, 3dc) corners', stitches: [{ stitchId: 'dc', count: 3 }, { stitchId: 'ch', count: 1 }, { stitchId: 'dc', count: 3 }] },
       { id: 'r5', label: 'sl st join',       stitches: [{ stitchId: 'slst', count: 1 }] },
-      { id: 'r6', label: 'fasten off',       stitches: [] },
+      { id: 'r6', label: 'fasten off',       stitches: [], isMarker: true },
     ],
     totalRepeats: 1,
     loop: false,
@@ -110,7 +110,7 @@ const SEED_SEQUENCES: LibrarySequence[] = [
   },
 ]
 
-const SEED_PATTERNS: LibraryPattern[] = [
+export const SEED_PATTERNS: LibraryPattern[] = [
   {
     id: 'lib-pat-cardigan',
     name: 'Granny Cardigan v3',
@@ -141,7 +141,7 @@ const SEED_PATTERNS: LibraryPattern[] = [
   },
 ]
 
-const SEED_ROWS: LibraryRow[] = [
+export const SEED_ROWS: LibraryRow[] = [
   {
     id: 'lib-row-1x2rib',
     label: 'k1, *p2, k1*, rep',
@@ -216,7 +216,12 @@ export const useLibraryStore = create<LibraryStore>()(
     {
       name: 'skein-library',
       storage: createJSONStorage(() => AsyncStorage),
-      version: 0,
+      version: 1,
+      migrate: (persistedState, _fromVersion) => {
+        // No schema changes yet; this stub exists so a future field addition
+        // has an obvious place to slot in a migration and bump version.
+        return (persistedState ?? {}) as Partial<LibraryStore>
+      },
       /**
        * Custom merge: zustand's default is `{...currentState, ...persistedState}` which
        * lets a stale empty `rows: []` in AsyncStorage silently clobber the seed data.

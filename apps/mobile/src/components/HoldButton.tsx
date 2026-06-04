@@ -1,4 +1,4 @@
-import React, { useRef } from 'react'
+import React, { useRef, useEffect } from 'react'
 import { View, Text, Pressable, StyleSheet } from 'react-native'
 import Svg, { Rect } from 'react-native-svg'
 import Animated, {
@@ -60,6 +60,8 @@ export default function HoldButton({
   const progress = useSharedValue(0)
   const scale = useSharedValue(1)
   const isHolding = useRef(false)
+  const isMounted = useRef(true)
+  useEffect(() => () => { isMounted.current = false }, [])
 
   const r = Math.min(measuredWidth, height) / 2
   const perimeter = 2 * Math.abs(measuredWidth - height) + 2 * Math.PI * (r - sw / 2)
@@ -67,9 +69,12 @@ export default function HoldButton({
   const handleComplete = () => {
     isHolding.current = false
     progress.value = 0
-    scale.value = withTiming(1, { duration: 120 })
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
     onComplete?.()
+    // onComplete may navigate/unmount us; only animate if we're still alive.
+    if (isMounted.current) {
+      scale.value = withTiming(1, { duration: 120 })
+    }
   }
 
   const animatedRingProps = useAnimatedProps(() => ({

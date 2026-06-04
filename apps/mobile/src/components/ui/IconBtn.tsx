@@ -1,20 +1,23 @@
 import React from 'react'
 import { Pressable, StyleSheet } from 'react-native'
 import { useTheme } from '../../theme/ThemeContext'
-import Icon from './Icon'
+import Icon, { type IconName } from './Icon'
 
 type Props = {
-  name: string
+  name: IconName
   onPress?: () => void
   size?: number
   color?: string
+  accessibilityLabel?: string
 }
 
-export default function IconBtn({ name, onPress, size = 36, color }: Props) {
+export default function IconBtn({ name, onPress, size = 36, color, accessibilityLabel }: Props) {
   const { colors } = useTheme()
   return (
     <Pressable
       onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel ?? name}
       style={({ pressed }) => [
         styles.btn,
         {
@@ -27,7 +30,7 @@ export default function IconBtn({ name, onPress, size = 36, color }: Props) {
         },
       ]}
     >
-      <Icon name={name as any} size={18} color={color ?? colors.ink}/>
+      <Icon name={name} size={18} color={color ?? colors.ink}/>
     </Pressable>
   )
 }

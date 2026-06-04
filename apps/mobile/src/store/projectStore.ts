@@ -10,7 +10,6 @@ type ProjectStore = {
   deleteProject: (id: string) => void
   advanceRow: (id: string) => void
   retreatRow: (id: string) => void
-  markFinished: (id: string) => void
 }
 
 function getCurrentSequence(project: Project): Sequence | undefined {
@@ -129,25 +128,29 @@ export const useProjectStore = create<ProjectStore>()(
           return { projects: updated }
         }),
 
-      markFinished: (id) =>
-        set((s) => ({
-          projects: s.projects.map((p) =>
-            p.id === id ? { ...p, status: 'finished', updatedAt: new Date().toISOString() } : p,
-          ),
-        })),
     }),
     {
       name: 'skein-projects',
       storage: createJSONStorage(() => AsyncStorage),
-      version: 0,
+      version: 1,
+      migrate: (persistedState, _fromVersion) => {
+        // No schema changes yet; stub for future field additions.
+        return (persistedState ?? {}) as { projects?: Project[] }
+      },
     },
   ),
 )
 
+// Marker rows (isMarker) are skipped in progress totals so the progress bar
+// doesn't peg at 100% one row early on patterns that end with e.g. "fasten off".
+function countableRows(seq: { rows: { isMarker?: boolean }[] }): number {
+  return seq.rows.reduce((n, r) => n + (r.isMarker ? 0 : 1), 0)
+}
+
 // Helper: compute total rows across all parts/sequences/repeats
 export function totalRows(project: Project): number {
   return project.parts.reduce((sum, part) => {
-    return sum + part.sequences.reduce((s2, seq) => s2 + seq.rows.length * seq.totalRepeats, 0)
+    return sum + part.sequences.reduce((s2, seq) => s2 + countableRows(seq) * seq.totalRepeats, 0)
   }, 0)
 }
 
@@ -158,10 +161,14 @@ export function completedRows(project: Project): number {
     const part = project.parts[pi]
     for (let si = 0; si < part.sequences.length; si++) {
       const seq = part.sequences[si]
+      const perRepeat = countableRows(seq)
       if (pi < project.currentPartIndex || (pi === project.currentPartIndex && si < project.currentSequenceIndex)) {
-        count += seq.rows.length * seq.totalRepeats
+        count += perRepeat * seq.totalRepeats
       } else if (pi === project.currentPartIndex && si === project.currentSequenceIndex) {
-        count += (project.currentRepeat - 1) * seq.rows.length + project.currentRowIndex
+        const rowsBeforeCurrent = seq.rows
+          .slice(0, project.currentRowIndex)
+          .reduce((n, r) => n + (r.isMarker ? 0 : 1), 0)
+        count += (project.currentRepeat - 1) * perRepeat + rowsBeforeCurrent
       }
     }
   }

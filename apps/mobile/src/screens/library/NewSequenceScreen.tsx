@@ -10,7 +10,6 @@ import { useTheme } from '../../theme/ThemeContext'
 import { useLibraryStore } from '../../store/libraryStore'
 import { useSettingsStore } from '../../store/settingsStore'
 import { useStitchMap } from '../../hooks/useStitchMap'
-import { STITCHES } from '../../tokens/stitches'
 import StitchGlyph from '../../components/StitchGlyph'
 import Icon from '../../components/ui/Icon'
 import StitchPickerModal from '../../components/pickers/StitchPickerModal'
@@ -21,14 +20,15 @@ import {
   removeLastStitchPreservingSegments,
   expandStitches,
 } from '../../components/RepeatRow/segments'
+import { stitchHue } from '../../components/RepeatRow/stitchHue'
 import type {
   Craft, LibraryRow, LibrarySequence, Row, StitchDef, StitchInstance,
 } from '../../types'
 import { uuid } from '../../utils/uuid'
+import { matchesNumberedTemplate } from '../../i18n'
 
 const DraggableFlatList = _DraggableFlatList as any
 const ScaleDecorator = _ScaleDecorator as any
-const DEFAULT_LABEL_RE = /^(Row|Řádek|Reihe)\s+\d+$/i
 
 type Props = {
   visible: boolean
@@ -39,9 +39,6 @@ type Props = {
 function totalStitches(stitches: StitchInstance[]) {
   return stitches.reduce((a, s) => a + s.count, 0)
 }
-
-const STITCH_BRICK   = new Set(['k', 'sl', 'kfb', 'm1'])
-const STITCH_MUSTARD = new Set(['p', 'p2tog', 'mb'])
 
 function makeEmptyRow(label: string): Row {
   return { id: uuid(), label, stitches: [] }
@@ -106,7 +103,7 @@ export default function NewSequenceScreen({ visible, onClose, defaultCraft = 'kn
     .map(id => stitchMap[id])
     .filter((s): s is StitchDef => !!s)
 
-  const totalStitchCount = STITCHES.filter(s => s.type === craft).length
+  const totalStitchCount = Object.values(stitchMap).filter(s => s.type === craft).length
 
   const addStitchToFocused = useCallback((stitchId: string) => {
     if (focusedRowIdx == null) return
@@ -139,7 +136,7 @@ export default function NewSequenceScreen({ visible, onClose, defaultCraft = 'kn
 
   const relabelDefaults = (list: Row[]): Row[] =>
     list.map((r, i) => {
-      const looksDefault = DEFAULT_LABEL_RE.test(r.label.trim())
+      const looksDefault = matchesNumberedTemplate('libraryCreate.rowDefaultLabel', r.label)
       return looksDefault ? { ...r, label: t('libraryCreate.rowDefaultLabel', { n: i + 1 }) } : r
     })
 
@@ -179,10 +176,7 @@ export default function NewSequenceScreen({ visible, onClose, defaultCraft = 'kn
     onClose()
   }
 
-  const stitchChipColor = (id: string) =>
-    STITCH_BRICK.has(id) ? colors.brick
-    : STITCH_MUSTARD.has(id) ? colors.mustard
-    : colors.forest
+  const stitchChipColor = (id: string) => stitchHue(colors, id)
 
   // 2×2 swatch glyphs for the preview — sample across first two rows
   const swatchStitches: (StitchInstance | null)[] = (() => {

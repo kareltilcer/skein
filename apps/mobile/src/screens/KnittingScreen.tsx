@@ -16,6 +16,7 @@ import Icon from '../components/ui/Icon'
 import PartMenu from '../components/PartMenu'
 import PartPicker from '../components/pickers/PartPicker'
 import RepeatRowBody from '../components/RepeatRow/RepeatRowBody'
+import { stitchHue } from '../components/RepeatRow/stitchHue'
 import type { StitchInstance } from '../types'
 
 type Props = { projectId: string }
@@ -62,6 +63,10 @@ export default function KnittingScreen({ projectId }: Props) {
   if (!project) {
     return (
       <Screen>
+        <View style={styles.topBar}>
+          <IconBtn name="back" onPress={() => router.back()}/>
+          <View style={{ flex: 1 }}/>
+        </View>
         <Text style={{ color: colors.inkMute, textAlign: 'center', marginTop: 40 }}>{t('knitting.notFound')}</Text>
       </Screen>
     )
@@ -88,11 +93,7 @@ export default function KnittingScreen({ projectId }: Props) {
     }).join(', ')
   }, [stitchInstances, stitchMap])
 
-  const colorFor = (id: string) => {
-    if (['k', 'sl', 'kfb', 'm1', 'c4f', 'c4b', 'sc', 'hdc'].includes(id)) return colors.brick
-    if (['p', 'p2tog', 'mb', 'dc', 'ch', 'slst'].includes(id)) return colors.mustard
-    return colors.forest
-  }
+  const colorFor = (id: string) => stitchHue(colors, id)
 
   return (
     <Screen>

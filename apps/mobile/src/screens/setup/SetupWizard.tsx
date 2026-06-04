@@ -8,7 +8,6 @@ import {useTranslation} from 'react-i18next'
 import {useTheme} from '../../theme/ThemeContext'
 import {useProjectStore} from '../../store/projectStore'
 import {useSettingsStore} from '../../store/settingsStore'
-import {STITCHES} from '../../tokens/stitches'
 import {useStitchMap} from '../../hooks/useStitchMap'
 import Screen from '../../components/ui/Screen'
 import Icon from '../../components/ui/Icon'
@@ -31,6 +30,7 @@ import {
     removeLastStitchPreservingSegments,
     segmentsFromMark,
 } from '../../components/RepeatRow/segments'
+import {stitchHue} from '../../components/RepeatRow/stitchHue'
 import _DraggableFlatList, {ScaleDecorator as _ScaleDecorator} from 'react-native-draggable-flatlist'
 const DraggableFlatList = _DraggableFlatList as any
 const ScaleDecorator = _ScaleDecorator as any
@@ -62,11 +62,6 @@ type Draft = {
     parts: DraftPart[]
     partsCustomized?: boolean   // true once user has explicitly added a part
 }
-
-// Stitch chip color groups — matches design's semantic grouping (brick=knit, mustard=purl, forest=other)
-const STITCH_BRICK   = new Set(['k', 'sl', 'kfb', 'm1'])
-const STITCH_MUSTARD = new Set(['p', 'p2tog', 'mb'])
-
 
 function usePartMeta() {
     const { t } = useTranslation()
@@ -1064,7 +1059,7 @@ function Step3({draft, onChange, initialFocus, onFocusConsumed}: {
         .map(id => stitchMap[id])
         .filter((s): s is NonNullable<typeof s> => !!s)
 
-    const totalStitchCount = STITCHES.filter(s => s.type === draft.craft).length
+    const totalStitchCount = Object.values(stitchMap).filter(s => s.type === draft.craft).length
 
     const addRow = (seqIdx: number) => {
         const seq = part!.sequences[seqIdx]!
@@ -1114,8 +1109,14 @@ function Step3({draft, onChange, initialFocus, onFocusConsumed}: {
     const removeRow = (seqIdx: number, rowIdx: number) => {
         const seq = part!.sequences[seqIdx]!
         updateSeq(activePart, seqIdx, {...seq, rows: seq.rows.filter((_, i) => i !== rowIdx)})
-        if (activeRow?.seqIdx === seqIdx && activeRow?.rowIdx === rowIdx) setActiveRow(null)
-        if (marking?.seqIdx === seqIdx && marking?.rowIdx === rowIdx) setMarking(null)
+        if (activeRow?.seqIdx === seqIdx) {
+            if (activeRow.rowIdx === rowIdx) setActiveRow(null)
+            else if (activeRow.rowIdx > rowIdx) setActiveRow({...activeRow, rowIdx: activeRow.rowIdx - 1})
+        }
+        if (marking?.seqIdx === seqIdx) {
+            if (marking.rowIdx === rowIdx) setMarking(null)
+            else if (marking.rowIdx > rowIdx) setMarking({...marking, rowIdx: marking.rowIdx - 1})
+        }
     }
 
     const confirmRemoveRow = (seqIdx: number, rowIdx: number) => {
@@ -1135,6 +1136,7 @@ function Step3({draft, onChange, initialFocus, onFocusConsumed}: {
         if (activeRow?.seqIdx === seqIdx) setActiveRow(null)
         else if (activeRow && activeRow.seqIdx > seqIdx) setActiveRow({...activeRow, seqIdx: activeRow.seqIdx - 1})
         if (marking?.seqIdx === seqIdx) setMarking(null)
+        else if (marking && marking.seqIdx > seqIdx) setMarking({...marking, seqIdx: marking.seqIdx - 1})
     }
 
     const confirmRemoveSeq = (seqIdx: number) => setConfirmSeqDialog({seqIdx})
@@ -1521,9 +1523,7 @@ function Step3({draft, onChange, initialFocus, onFocusConsumed}: {
                                                 {row.stitches.flatMap((si_item, idx) => {
                                                     const def = stitchMap[si_item.stitchId]
                                                     if (!def) return []
-                                                    const chipColor = STITCH_BRICK.has(si_item.stitchId) ? colors.brick
-                                                                    : STITCH_MUSTARD.has(si_item.stitchId) ? colors.mustard
-                                                                    : colors.forest
+                                                    const chipColor = stitchHue(colors, si_item.stitchId)
                                                     return Array.from({length: si_item.count}, (_, i) => (
                                                         <View key={`${idx}-${i}`} style={{
                                                             width: 26, height: 36, borderRadius: 6,
@@ -1840,9 +1840,7 @@ function Step3({draft, onChange, initialFocus, onFocusConsumed}: {
                                             {chips.map((chip, i) => {
                                                 const def = stitchMap[chip.stitchId]
                                                 if (!def) return null
-                                                const c = STITCH_BRICK.has(chip.stitchId) ? colors.brick
-                                                        : STITCH_MUSTARD.has(chip.stitchId) ? colors.mustard
-                                                        : colors.forest
+                                                const c = stitchHue(colors, chip.stitchId)
                                                 return (
                                                     <View key={i} style={{
                                                         width: 22, height: 26, borderRadius: 6,
@@ -2050,9 +2048,7 @@ function Step3({draft, onChange, initialFocus, onFocusConsumed}: {
                                                                 {chips.map((chip, i) => {
                                                                     const def = stitchMap[chip.stitchId]
                                                                     if (!def) return null
-                                                                    const c = STITCH_BRICK.has(chip.stitchId) ? colors.brick
-                                                                            : STITCH_MUSTARD.has(chip.stitchId) ? colors.mustard
-                                                                            : colors.forest
+                                                                    const c = stitchHue(colors, chip.stitchId)
                                                                     return (
                                                                         <View key={i} style={{
                                                                             width: 14, height: 17, borderRadius: 4,
@@ -2515,7 +2511,6 @@ export default function SetupWizard({ projectId }: SetupWizardProps = {}) {
     const {colors, fonts, spacing, radius} = useTheme()
     const router = useRouter()
     const defaultCraft = useSettingsStore((s) => s.defaultCraft)
-    const markWelcomeSeen = useSettingsStore((s) => s.markWelcomeSeen)
     const addProject = useProjectStore((s) => s.addProject)
     const updateProject = useProjectStore((s) => s.updateProject)
     const existing = useProjectStore((s) => projectId ? s.projects.find((p) => p.id === projectId) : undefined)
@@ -2601,6 +2596,21 @@ export default function SetupWizard({ projectId }: SetupWizardProps = {}) {
 
     const finish = () => {
         if (isEditing && existing) {
+            // Clamp pointers in case the edit removed/shortened the current part/seq/row.
+            const partIdx = Math.min(existing.currentPartIndex, Math.max(0, draft.parts.length - 1))
+            const part = draft.parts[partIdx]
+            const seqs = part?.sequences ?? []
+            const seqIdx = Math.min(existing.currentSequenceIndex, Math.max(0, seqs.length - 1))
+            const seq = seqs[seqIdx]
+            const rows = seq?.rows ?? []
+            const rowIdx = Math.min(existing.currentRowIndex, Math.max(0, rows.length - 1))
+            const totalRepeats = seq?.totalRepeats ?? 1
+            const currentSeqShrunk =
+                seqIdx !== existing.currentSequenceIndex
+                || (seq && existing.currentRowIndex >= seq.rows.length)
+            const repeat = currentSeqShrunk
+                ? 1
+                : Math.min(existing.currentRepeat, Math.max(1, totalRepeats))
             updateProject(existing.id, {
                 name: draft.name,
                 craft: draft.craft,
@@ -2610,6 +2620,10 @@ export default function SetupWizard({ projectId }: SetupWizardProps = {}) {
                 yarnColor: draft.yarnColor,
                 notes: draft.notes,
                 parts: draft.parts,
+                currentPartIndex: partIdx,
+                currentSequenceIndex: seqIdx,
+                currentRowIndex: rowIdx,
+                currentRepeat: repeat,
             })
             router.back()
             return
@@ -2633,7 +2647,6 @@ export default function SetupWizard({ projectId }: SetupWizardProps = {}) {
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
         })
-        markWelcomeSeen()
         router.replace(`/project/${id}`)
     }
 

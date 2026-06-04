@@ -8,7 +8,6 @@ import { useTheme } from '../../theme/ThemeContext'
 import { useLibraryStore } from '../../store/libraryStore'
 import { useSettingsStore } from '../../store/settingsStore'
 import { useStitchMap } from '../../hooks/useStitchMap'
-import { STITCHES } from '../../tokens/stitches'
 import StitchGlyph from '../../components/StitchGlyph'
 import Icon from '../../components/ui/Icon'
 import StitchPickerModal from '../../components/pickers/StitchPickerModal'
@@ -20,6 +19,7 @@ import {
   expandStitches,
   segmentsFromMark,
 } from '../../components/RepeatRow/segments'
+import { stitchHue } from '../../components/RepeatRow/stitchHue'
 import type {
   Craft, LibraryRow, Row, StitchDef, StitchInstance,
 } from '../../types'
@@ -34,10 +34,6 @@ type Props = {
 function totalStitches(stitches: StitchInstance[]) {
   return stitches.reduce((a, s) => a + s.count, 0)
 }
-
-// Brick / mustard / forest cycling, mirroring SetupWizard step 3
-const STITCH_BRICK   = new Set(['k', 'sl', 'kfb', 'm1'])
-const STITCH_MUSTARD = new Set(['p', 'p2tog', 'mb'])
 
 export default function NewRowScreen({ visible, onClose, defaultCraft = 'knit' }: Props) {
   const { t } = useTranslation()
@@ -96,7 +92,7 @@ export default function NewRowScreen({ visible, onClose, defaultCraft = 'knit' }
     .map(id => stitchMap[id])
     .filter((s): s is StitchDef => !!s)
 
-  const totalStitchCount = STITCHES.filter(s => s.type === craft).length
+  const totalStitchCount = Object.values(stitchMap).filter(s => s.type === craft).length
 
   const addStitch = useCallback((stitchId: string) => {
     setRow(r => appendStitchPreservingSegments(r, stitchId))
@@ -163,10 +159,7 @@ export default function NewRowScreen({ visible, onClose, defaultCraft = 'knit' }
   const flatIds = useMemo(() => expandStitches(row.stitches), [row.stitches])
   const dockVisible = marking === null && !showPicker
 
-  const stitchChipColor = (id: string) =>
-    STITCH_BRICK.has(id) ? colors.brick
-    : STITCH_MUSTARD.has(id) ? colors.mustard
-    : colors.forest
+  const stitchChipColor = (id: string) => stitchHue(colors, id)
 
   return (
     <Modal

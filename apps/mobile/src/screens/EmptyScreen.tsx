@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import {
-  View, Text, ScrollView, Pressable, StyleSheet, Modal,
+  View, Text, ScrollView, Pressable, StyleSheet, Modal, useWindowDimensions,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useRouter } from 'expo-router'
@@ -8,7 +8,7 @@ import { useTranslation } from 'react-i18next'
 import Svg, { Circle, Path } from 'react-native-svg'
 import { useTheme } from '../theme/ThemeContext'
 import { useSettingsStore } from '../store/settingsStore'
-import { SUPPORTED_LANGUAGES, isSupportedLanguage } from '../i18n/languages'
+import { SUPPORTED_LANGUAGES, isSupportedLanguage, type LanguageCode } from '../i18n/languages'
 import Btn from '../components/ui/Btn'
 import Icon from '../components/ui/Icon'
 import IconBtn from '../components/ui/IconBtn'
@@ -37,6 +37,8 @@ export default function EmptyScreen() {
 
   const [langOpen, setLangOpen] = useState(false)
   const code = isSupportedLanguage(savedLang) ? savedLang : 'en'
+  const { height: screenHeight } = useWindowDimensions()
+  const langSheetMaxHeight = Math.max(240, screenHeight - 160)
 
   const goSetup = () => {
     markWelcomeSeen()
@@ -46,7 +48,7 @@ export default function EmptyScreen() {
     markWelcomeSeen()
     router.replace('/(tabs)/library')
   }
-  const pickLang = (c: string) => {
+  const pickLang = (c: LanguageCode) => {
     setLanguage(c)
     setLangOpen(false)
   }
@@ -100,7 +102,7 @@ export default function EmptyScreen() {
       {/* language picker modal */}
       <Modal visible={langOpen} transparent animationType="fade" onRequestClose={() => setLangOpen(false)}>
         <Pressable style={styles.backdrop} onPress={() => setLangOpen(false)}/>
-        <View style={[styles.langSheet, { backgroundColor: colors.card, borderColor: colors.rule }]}>
+        <View style={[styles.langSheet, { backgroundColor: colors.card, borderColor: colors.rule, maxHeight: langSheetMaxHeight }]}>
           <Text style={{ fontFamily: fonts.mono, fontSize: 10, color: colors.inkMute, letterSpacing: 3, textTransform: 'uppercase', padding: 12 }}>
             {t('welcome.languageModalTitle')}
           </Text>
@@ -145,6 +147,6 @@ const styles = StyleSheet.create({
   body:     { fontSize: 15, lineHeight: 22, textAlign: 'center', marginTop: 18, maxWidth: 300 },
   ctaGroup: { width: '100%' },
   backdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(43,24,16,0.4)' },
-  langSheet:{ position: 'absolute', top: 100, right: 20, left: 60, borderRadius: 18, borderWidth: 1, maxHeight: 420, overflow: 'hidden' },
+  langSheet:{ position: 'absolute', top: 100, right: 20, left: 60, borderRadius: 18, borderWidth: 1, overflow: 'hidden' },
   langRow:  { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 12, paddingVertical: 12, borderRadius: 10 },
 })

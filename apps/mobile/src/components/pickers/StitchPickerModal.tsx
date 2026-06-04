@@ -11,6 +11,7 @@ import {
   getPickerGroups, type PickerFilter,
 } from '../../tokens/stitches'
 import { useCustomStitchStore } from '../../store/customStitchStore'
+import { useSettingsStore } from '../../store/settingsStore'
 import StitchGlyph from '../StitchGlyph'
 import Icon from '../ui/Icon'
 import Btn from '../ui/Btn'
@@ -60,6 +61,7 @@ export default function StitchPickerModal({
   const { t } = useTranslation()
   const { colors, fonts, radius } = useTheme()
   const { customStitches, addCustomStitch } = useCustomStitchStore()
+  const recordStitchUsed = useSettingsStore((s) => s.recordStitchUsed)
   const { width: screenWidth, height: screenHeight } = useWindowDimensions()
 
   // Exact 5-column chip width matching design's repeat(5, 1fr)
@@ -154,8 +156,9 @@ export default function StitchPickerModal({
     setPanelAbbr('')
     setPanelName('')
     setPanelSymbol('vline')
+    recordStitchUsed(id)
     handleSelect(newStitch)
-  }, [panelAbbr, panelName, panelSymbol, craftFilter, addCustomStitch, colors.brick, handleSelect])
+  }, [panelAbbr, panelName, panelSymbol, craftFilter, addCustomStitch, recordStitchUsed, colors.brick, handleSelect])
 
   return (
     <Modal

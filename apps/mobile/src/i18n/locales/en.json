@@ -154,6 +154,11 @@
     "cloudBody": "Still on the needles — cross-device sync and cloud backup is coming in a future updates. For now, your projects stay snug right here on this device.",
     "more": "More",
     "tellAFriend": "Tell a friend (please?)",
+    "resetData": "Reset Skein data",
+    "resetDataTitle": "Wipe everything?",
+    "resetDataNoUndo": "No undo · data gone",
+    "resetDataBody": "Removes every project and your custom library and stitches. Your theme, language, and preferences are kept. Useful if something looks broken — or you just want a clean slate.",
+    "resetDataConfirm": "Yes, reset everything",
     "footer": "YarnLog 1.0 · made with yarn & code",
     "shareTitle": "YarnLog — a cozy knitting companion",
     "shareMessage": "I've been using YarnLog to track my knitting & crochet projects — thought you might like it too. 🧶"

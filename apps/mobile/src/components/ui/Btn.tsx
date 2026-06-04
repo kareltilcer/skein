@@ -2,7 +2,7 @@ import React from 'react'
 import { Pressable, Text, StyleSheet, ActivityIndicator } from 'react-native'
 import { LinearGradient } from 'expo-linear-gradient'
 import { useTheme } from '../../theme/ThemeContext'
-import Icon from './Icon'
+import Icon, { type IconName } from './Icon'
 
 type Variant = 'primary' | 'mustard' | 'ghost' | 'soft' | 'chip'
 type Size = 'sm' | 'md' | 'lg'
@@ -12,7 +12,7 @@ type Props = {
   onPress?: () => void
   variant?: Variant
   size?: Size
-  icon?: string
+  icon?: IconName
   full?: boolean
   disabled?: boolean
   loading?: boolean
@@ -52,14 +52,14 @@ export default function Btn({
             colors={vs.gradient!}
             style={[styles.inner, {
               height: sz.height, paddingHorizontal: sz.paddingH,
-              borderRadius: radius.md, opacity: pressed ? 0.85 : 1,
+              borderRadius: radius.md, opacity: disabled ? 0.5 : pressed ? 0.85 : 1,
             }, full ? { width: '100%' } : {}]}
           >
             {loading ? (
               <ActivityIndicator color={vs.fg} size="small"/>
             ) : (
               <>
-                {icon ? <Icon name={icon as any} size={18} color={vs.fg}/> : null}
+                {icon ? <Icon name={icon} size={18} color={vs.fg}/> : null}
                 <Text style={{ color: vs.fg, fontSize: sz.fontSize, fontFamily: fonts.bodySb, letterSpacing: -0.1 }}>
                   {children}
                 </Text>

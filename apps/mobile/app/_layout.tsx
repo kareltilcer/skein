@@ -27,12 +27,21 @@ function RootLayout() {
 
   const languageInitialized = useSettingsStore((s) => s.languageInitialized)
   const setLanguage = useSettingsStore((s) => s.setLanguage)
+  const [settingsHydrated, setSettingsHydrated] = React.useState(
+    () => useSettingsStore.persist.hasHydrated(),
+  )
 
   React.useEffect(() => {
-    if (!languageInitialized) {
-      setLanguage(detectSystemLanguage())
-    }
-  }, [languageInitialized, setLanguage])
+    if (settingsHydrated) return
+    const unsub = useSettingsStore.persist.onFinishHydration(() => setSettingsHydrated(true))
+    if (useSettingsStore.persist.hasHydrated()) setSettingsHydrated(true)
+    return unsub
+  }, [settingsHydrated])
+
+  React.useEffect(() => {
+    if (!settingsHydrated) return
+    if (!languageInitialized) setLanguage(detectSystemLanguage())
+  }, [settingsHydrated, languageInitialized, setLanguage])
 
   const [fontsLoaded] = useFonts({
     Caprasimo_400Regular,
@@ -45,10 +54,10 @@ function RootLayout() {
   })
 
   React.useEffect(() => {
-    if (fontsLoaded) SplashScreen.hideAsync()
-  }, [fontsLoaded])
+    if (fontsLoaded && settingsHydrated) SplashScreen.hideAsync()
+  }, [fontsLoaded, settingsHydrated])
 
-  if (!fontsLoaded) return null
+  if (!fontsLoaded || !settingsHydrated) return null
 
   return (
     <ThemeProvider theme={theme}>

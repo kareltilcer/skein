@@ -30,6 +30,9 @@ export type Row = {
   label: string
   stitches: StitchInstance[]
   segments?: RowSegment[]
+  /** Marker rows (e.g. "fasten off") are step markers, not real rows.
+   *  They are skipped in progress calculations. */
+  isMarker?: boolean
 }
 
 export type Sequence = {

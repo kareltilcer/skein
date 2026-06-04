@@ -1,7 +1,7 @@
 import React from 'react'
 import Svg, { Line, Circle, Path, Polyline, Rect } from 'react-native-svg'
 
-type IconName =
+export type IconName =
   | 'plus' | 'chevL' | 'chevR' | 'chevDown' | 'x' | 'search' | 'book'
   | 'home' | 'gear' | 'more' | 'back' | 'check' | 'moon' | 'sun' | 'bulb'
   | 'edit' | 'trash' | 'yarn' | 'needle' | 'loop' | 'refresh' | 'save'

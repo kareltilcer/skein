@@ -14,7 +14,6 @@ import { useTheme } from '../../theme/ThemeContext'
 import { useLibraryStore } from '../../store/libraryStore'
 import { useSettingsStore } from '../../store/settingsStore'
 import { useStitchMap } from '../../hooks/useStitchMap'
-import { STITCHES } from '../../tokens/stitches'
 import { uuid } from '../../utils/uuid'
 import Icon from '../../components/ui/Icon'
 import Btn from '../../components/ui/Btn'
@@ -31,6 +30,8 @@ import {
   removeLastStitchPreservingSegments,
   segmentsFromMark,
 } from '../../components/RepeatRow/segments'
+import { stitchHue } from '../../components/RepeatRow/stitchHue'
+import { matchesNumberedTemplate } from '../../i18n'
 import type {
   Craft, LibraryPattern, LibraryRow, LibrarySequence, Row, RowSegment, StitchDef, StitchInstance,
 } from '../../types'
@@ -67,10 +68,6 @@ type DraftPart = {
 type ActiveRow = { partIdx: number; seqIdx: number; rowIdx: number }
 type Marking = ActiveRow & { step: 'start' | 'end'; start: number | null }
 
-const STITCH_BRICK   = new Set(['k', 'sl', 'kfb', 'm1'])
-const STITCH_MUSTARD = new Set(['p', 'p2tog', 'mb'])
-
-
 export default function NewPatternScreen({ visible, onClose, defaultCraft = 'knit' }: Props) {
   const { t } = useTranslation()
   const { colors, fonts, radius } = useTheme()
@@ -103,16 +100,23 @@ export default function NewPatternScreen({ visible, onClose, defaultCraft = 'kni
   // Workaround: NestableDraggableFlatList does not forward autoscrollSpeed/Threshold to its
   // useNestedAutoScroll hook, so the library defaults (speed=100, threshold=30) fire on every drag
   // begin and call scrollableRef.scrollTo on the NestableScrollContainer — yanking the view upward.
-  // Neutralise it by replacing the scroll container's scrollTo with a no-op (touch scrolling is
-  // unaffected; only programmatic autoscroll is silenced).
+  // Neutralise drag-driven autoscroll by intercepting scrollTo calls that originate from the
+  // useNestedAutoScroll RAF loop while keeping every other caller (KeyboardAvoidingView,
+  // "scroll to error", manual scrolls) functional. We do this by toggling a flag for the
+  // duration of the drag and short-circuiting scrollTo only while it is set.
   const scrollContainerRef = useRef<any>(null)
+  const autoscrollSuppressed = useRef(false)
   useEffect(() => {
     const node = scrollContainerRef.current
     if (!node || node.__autoscrollPatched) return
-    if (typeof node.scrollTo === 'function') {
-      node.scrollTo = () => {}
-      node.__autoscrollPatched = true
+    const original = node.scrollTo
+    if (typeof original !== 'function') return
+    node.scrollTo = function patchedScrollTo(...args: unknown[]) {
+      if (autoscrollSuppressed.current) return
+      return original.apply(this, args)
     }
+    node.__autoscrollPatched = true
+    node.__autoscrollOriginal = original
   })
 
   useEffect(() => {
@@ -162,7 +166,7 @@ export default function NewPatternScreen({ visible, onClose, defaultCraft = 'kni
     .map(id => stitchMap[id])
     .filter((s): s is StitchDef => !!s)
 
-  const totalStitchCount = STITCHES.filter(s => s.type === craft).length
+  const totalStitchCount = Object.values(stitchMap).filter(s => s.type === craft).length
 
   const part = activePartIdx != null ? parts[activePartIdx] : null
 
@@ -184,7 +188,7 @@ export default function NewPatternScreen({ visible, onClose, defaultCraft = 'kni
     setParts(ps => {
       const next = ps.filter((_, i) => i !== idx)
       return next.map((p, i) => {
-        const looksDefault = /^(Part|Část|Teil)\s+\d+$/i.test(p.name.trim())
+        const looksDefault = matchesNumberedTemplate('libraryCreate.partDefaultLabel', p.name)
         return looksDefault ? { ...p, name: t('libraryCreate.partDefaultLabel', { n: i + 1 }) } : p
       })
     })
@@ -311,6 +315,7 @@ export default function NewPatternScreen({ visible, onClose, defaultCraft = 'kni
     if (activeRow?.seqIdx === seqIdx) setActiveRow(null)
     else if (activeRow && activeRow.seqIdx > seqIdx) setActiveRow({ ...activeRow, seqIdx: activeRow.seqIdx - 1 })
     if (marking?.seqIdx === seqIdx) setMarking(null)
+    else if (marking && marking.seqIdx > seqIdx) setMarking({ ...marking, seqIdx: marking.seqIdx - 1 })
   }
 
   const confirmRemoveSeq = (seqIdx: number) => setConfirmSeqDialog({ seqIdx })
@@ -354,8 +359,14 @@ export default function NewPatternScreen({ visible, onClose, defaultCraft = 'kni
     if (activePartIdx == null || !part) return
     const seq = part.sequences[seqIdx]!
     updateSeq(activePartIdx, seqIdx, { ...seq, rows: seq.rows.filter((_, j) => j !== rowIdx) })
-    if (activeRow?.seqIdx === seqIdx && activeRow?.rowIdx === rowIdx) setActiveRow(null)
-    if (marking?.seqIdx === seqIdx && marking?.rowIdx === rowIdx) setMarking(null)
+    if (activeRow?.seqIdx === seqIdx) {
+      if (activeRow.rowIdx === rowIdx) setActiveRow(null)
+      else if (activeRow.rowIdx > rowIdx) setActiveRow({ ...activeRow, rowIdx: activeRow.rowIdx - 1 })
+    }
+    if (marking?.seqIdx === seqIdx) {
+      if (marking.rowIdx === rowIdx) setMarking(null)
+      else if (marking.rowIdx > rowIdx) setMarking({ ...marking, rowIdx: marking.rowIdx - 1 })
+    }
   }
 
   const confirmRemoveRow = (seqIdx: number, rowIdx: number) => setConfirmDialog({ seqIdx, rowIdx })
@@ -375,11 +386,19 @@ export default function NewPatternScreen({ visible, onClose, defaultCraft = 'kni
   }
 
   const addStitchToRow = (partIdx: number, seqIdx: number, rowIdx: number, stitchId: string) => {
-    const p = parts[partIdx]!
-    const seq = p.sequences[seqIdx]!
-    const row = seq.rows[rowIdx]!
-    const nextRow = appendStitchPreservingSegments(row, stitchId)
-    updateSeq(partIdx, seqIdx, { ...seq, rows: seq.rows.map((r, i) => i === rowIdx ? nextRow as DraftRow : r) })
+    setParts(ps => ps.map((p, i) => {
+      if (i !== partIdx) return p
+      return {
+        ...p,
+        sequences: p.sequences.map((seq, j) => {
+          if (j !== seqIdx) return seq
+          return {
+            ...seq,
+            rows: seq.rows.map((r, k) => k === rowIdx ? (appendStitchPreservingSegments(r, stitchId) as DraftRow) : r),
+          }
+        }),
+      }
+    }))
     recordStitchUsed(stitchId)
   }
 
@@ -633,7 +652,11 @@ export default function NewPatternScreen({ visible, onClose, defaultCraft = 'kni
               <NestableDraggableFlatList
                 data={parts}
                 keyExtractor={(p: DraftPart) => p.id}
-                onDragEnd={({ data }: { data: DraftPart[] }) => reorderParts(data)}
+                onDragBegin={() => { autoscrollSuppressed.current = true }}
+                onDragEnd={({ data }: { data: DraftPart[] }) => {
+                  autoscrollSuppressed.current = false
+                  reorderParts(data)
+                }}
                 scrollEnabled={false}
                 activationDistance={12}
                 autoscrollSpeed={0}
@@ -733,7 +756,11 @@ export default function NewPatternScreen({ visible, onClose, defaultCraft = 'kni
                             <NestableDraggableFlatList
                               data={p.sequences}
                               keyExtractor={(s: DraftSequence) => s.id}
-                              onDragEnd={({ data }: { data: DraftSequence[] }) => reorderSequences(pi, data)}
+                              onDragBegin={() => { autoscrollSuppressed.current = true }}
+                              onDragEnd={({ data }: { data: DraftSequence[] }) => {
+                                autoscrollSuppressed.current = false
+                                reorderSequences(pi, data)
+                              }}
                               scrollEnabled={false}
                               activationDistance={12}
                               autoscrollSpeed={0}
@@ -856,7 +883,11 @@ export default function NewPatternScreen({ visible, onClose, defaultCraft = 'kni
                                           <NestableDraggableFlatList
                                             data={seq.rows}
                                             keyExtractor={(r: DraftRow) => r.id}
-                                            onDragEnd={({ data }: { data: DraftRow[] }) => reorderRows(pi, si, data)}
+                                            onDragBegin={() => { autoscrollSuppressed.current = true }}
+                                            onDragEnd={({ data }: { data: DraftRow[] }) => {
+                                              autoscrollSuppressed.current = false
+                                              reorderRows(pi, si, data)
+                                            }}
                                             scrollEnabled={false}
                                             activationDistance={12}
                                             autoscrollSpeed={0}
@@ -996,9 +1027,7 @@ export default function NewPatternScreen({ visible, onClose, defaultCraft = 'kni
                                                         {row.stitches.flatMap((si_item: StitchInstance, idx: number) => {
                                                           const def = stitchMap[si_item.stitchId]
                                                           if (!def) return []
-                                                          const chipColor = STITCH_BRICK.has(si_item.stitchId) ? colors.brick
-                                                                          : STITCH_MUSTARD.has(si_item.stitchId) ? colors.mustard
-                                                                          : colors.forest
+                                                          const chipColor = stitchHue(colors, si_item.stitchId)
                                                           return Array.from({ length: si_item.count }, (_, i) => (
                                                             <View key={`${idx}-${i}`} style={{
                                                               width: 26, height: 36, borderRadius: 6,
@@ -1326,9 +1355,7 @@ export default function NewPatternScreen({ visible, onClose, defaultCraft = 'kni
                       {chips.map((chip, i) => {
                         const def = stitchMap[chip.stitchId]
                         if (!def) return null
-                        const c = STITCH_BRICK.has(chip.stitchId) ? colors.brick
-                                : STITCH_MUSTARD.has(chip.stitchId) ? colors.mustard
-                                : colors.forest
+                        const c = stitchHue(colors, chip.stitchId)
                         return (
                           <View key={i} style={{
                             width: 22, height: 26, borderRadius: 6,
@@ -1486,9 +1513,7 @@ export default function NewPatternScreen({ visible, onClose, defaultCraft = 'kni
                                 {chips.map((chip, i) => {
                                   const def = stitchMap[chip.stitchId]
                                   if (!def) return null
-                                  const c = STITCH_BRICK.has(chip.stitchId) ? colors.brick
-                                          : STITCH_MUSTARD.has(chip.stitchId) ? colors.mustard
-                                          : colors.forest
+                                  const c = stitchHue(colors, chip.stitchId)
                                   return (
                                     <View key={i} style={{
                                       width: 14, height: 17, borderRadius: 4,

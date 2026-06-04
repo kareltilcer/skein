@@ -1,16 +1,18 @@
 import React, { useState } from 'react'
-import { View, Text, ScrollView, Pressable, StyleSheet, Share } from 'react-native'
+import { View, Text, ScrollView, Pressable, StyleSheet, Share, Modal } from 'react-native'
 
 import { LinearGradient } from 'expo-linear-gradient'
+import { BlurView } from 'expo-blur'
 import { useRouter } from 'expo-router'
 import { useTranslation } from 'react-i18next'
 import { useTheme } from '../theme/ThemeContext'
 import { useSettingsStore } from '../store/settingsStore'
 import { lightColors, darkColors } from '../tokens/colors'
 import { languageLabel } from '../i18n/languages'
+import { resetSkeinData } from '../utils/resetStores'
 import Screen from '../components/ui/Screen'
 import AppBar from '../components/ui/AppBar'
-import Icon from '../components/ui/Icon'
+import Icon, { type IconName } from '../components/ui/Icon'
 import type { Theme, Craft, NeedleUnit } from '../types'
 
 function SectionLabel({ children }: { children: string }) {
@@ -98,7 +100,7 @@ function ThemeCard({ mode, active, onPress }: { mode: Theme; active: boolean; on
 function SettingsRow({
   icon, iconColor, title, value, onPress, expanded,
 }: {
-  icon: string; iconColor: string; title: string; value: string
+  icon: IconName; iconColor: string; title: string; value: string
   onPress?: () => void; expanded?: boolean
 }) {
   const { colors, fonts, fontSize, radius } = useTheme()
@@ -110,7 +112,7 @@ function SettingsRow({
       style={[styles.settingsRow, { backgroundColor: colors.card, borderColor: colors.rule, borderRadius: radius.md }]}
     >
       <View style={[styles.iconBadge, { backgroundColor: colors.cream2, borderRadius: 10 }]}>
-        <Icon name={icon as any} size={20} color={iconColor}/>
+        <Icon name={icon} size={20} color={iconColor}/>
       </View>
       <View style={{ flex: 1 }}>
         <Text style={{ fontFamily: fonts.bodySb, fontSize: fontSize.sm, color: colors.ink }}>{title}</Text>
@@ -240,11 +242,11 @@ function NeedleUnitChips({ value, onChange }: { value: NeedleUnit; onChange: (u:
   )
 }
 
-function MiniRow({ icon, label, accent, last, onPress }: { icon: string; label: string; accent?: string; last?: boolean; onPress?: () => void }) {
+function MiniRow({ icon, label, accent, last, onPress }: { icon: IconName; label: string; accent?: string; last?: boolean; onPress?: () => void }) {
   const { colors, fonts, fontSize } = useTheme()
   return (
     <Pressable onPress={onPress} style={[styles.miniRow, { borderBottomWidth: last ? 0 : 1, borderBottomColor: colors.rule }]}>
-      <Icon name={icon as any} size={18} color={accent ?? colors.inkSoft}/>
+      <Icon name={icon} size={18} color={accent ?? colors.inkSoft}/>
       <Text style={{ flex: 1, fontFamily: fonts.body, fontSize: fontSize.sm, color: colors.ink, fontWeight: accent ? '700' : '500' }}>
         {label}
       </Text>
@@ -266,9 +268,27 @@ export default function SettingsScreen() {
   const setHoldTimeMs       = useSettingsStore((s) => s.setHoldTimeMs)
   const setDefaultCraft     = useSettingsStore((s) => s.setDefaultCraft)
   const setNeedleSizeUnit   = useSettingsStore((s) => s.setNeedleSizeUnit)
-  const [holdOpen, setHoldOpen]   = useState(false)
-  const [craftOpen, setCraftOpen] = useState(false)
-  const [unitOpen, setUnitOpen]   = useState(false)
+  // Single open key — settings groups behave as an accordion.
+  const [openGroup, setOpenGroup] = useState<'hold' | 'craft' | 'unit' | null>(null)
+  const holdOpen  = openGroup === 'hold'
+  const craftOpen = openGroup === 'craft'
+  const unitOpen  = openGroup === 'unit'
+  const toggleGroup = (g: 'hold' | 'craft' | 'unit') =>
+    setOpenGroup((cur) => (cur === g ? null : g))
+
+  const [resetConfirmOpen, setResetConfirmOpen] = useState(false)
+  const [resetting, setResetting] = useState(false)
+
+  const executeReset = async () => {
+    if (resetting) return
+    setResetting(true)
+    try {
+      await resetSkeinData()
+    } finally {
+      setResetting(false)
+      setResetConfirmOpen(false)
+    }
+  }
 
   const shareSkein = async () => {
     try {
@@ -317,7 +337,7 @@ export default function SettingsScreen() {
             title={t('settings.defaultCraft')}
             value={defaultCraft === 'knit' ? t('craft.knit') : t('craft.crochet')}
             expanded={craftOpen}
-            onPress={() => setCraftOpen((v) => !v)}
+            onPress={() => toggleGroup('craft')}
           />
           {craftOpen && <CraftChips value={defaultCraft} onChange={setDefaultCraft}/>}
           <SettingsRow
@@ -326,7 +346,7 @@ export default function SettingsScreen() {
             title={t('settings.defaultNeedleMetric')}
             value={needleSizeUnit === 'mm' ? t('settings.needleMetricMm') : t('settings.needleMetricUs')}
             expanded={unitOpen}
-            onPress={() => setUnitOpen((v) => !v)}
+            onPress={() => toggleGroup('unit')}
           />
           {unitOpen && <NeedleUnitChips value={needleSizeUnit} onChange={setNeedleSizeUnit}/>}
           <SettingsRow
@@ -335,7 +355,7 @@ export default function SettingsScreen() {
             title={t('settings.holdTimeToAdvance')}
             value={t('common.secondsLong', { seconds: (holdTimeMs / 1000).toFixed(1) })}
             expanded={holdOpen}
-            onPress={() => setHoldOpen((v) => !v)}
+            onPress={() => toggleGroup('hold')}
           />
           {holdOpen && <HoldTimeChips value={holdTimeMs} onChange={setHoldTimeMs}/>}
         </View>
@@ -364,6 +384,13 @@ export default function SettingsScreen() {
           <SectionLabel>{t('settings.more')}</SectionLabel>
           <View style={[styles.moreGroup, { backgroundColor: colors.card, borderColor: colors.rule, borderRadius: radius.md }]}>
             <MiniRow icon="user" label={t('settings.tellAFriend')} onPress={shareSkein}/>
+            {/*<MiniRow*/}
+            {/*  icon="trash"*/}
+            {/*  label={t('settings.resetData')}*/}
+            {/*  accent={colors.brick}*/}
+            {/*  last*/}
+            {/*  onPress={() => setResetConfirmOpen(true)}*/}
+            {/*/>*/}
           </View>
         </View>
 
@@ -372,6 +399,118 @@ export default function SettingsScreen() {
           {t('settings.footer')}
         </Text>
       </ScrollView>
+
+      {resetConfirmOpen && (
+        <Modal visible transparent animationType="fade" onRequestClose={() => !resetting && setResetConfirmOpen(false)}>
+          <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+            <BlurView
+              intensity={14}
+              tint="dark"
+              style={[StyleSheet.absoluteFillObject, { backgroundColor: 'rgba(43,24,16,0.42)' }]}
+            />
+            <Pressable
+              style={StyleSheet.absoluteFillObject}
+              onPress={() => !resetting && setResetConfirmOpen(false)}
+            />
+            <View style={{
+              width: 320, maxWidth: '92%',
+              backgroundColor: colors.bg,
+              borderRadius: 22,
+              borderWidth: 1, borderColor: colors.rule,
+              overflow: 'hidden',
+              shadowColor: 'rgba(43,24,16,1)',
+              shadowOffset: { width: 0, height: 30 },
+              shadowOpacity: 0.35,
+              shadowRadius: 60,
+              elevation: 20,
+              marginTop: -48,
+            }}>
+              <View style={{
+                paddingTop: 22, paddingHorizontal: 22, paddingBottom: 14,
+                backgroundColor: '#FBEFEA',
+                borderBottomWidth: 1,
+                borderBottomColor: 'rgba(156,61,46,0.15)',
+                alignItems: 'center', gap: 12,
+              }}>
+                <View style={{
+                  width: 56, height: 56, borderRadius: 16,
+                  backgroundColor: colors.brick,
+                  alignItems: 'center', justifyContent: 'center',
+                  shadowColor: colors.brick,
+                  shadowOffset: { width: 0, height: 10 },
+                  shadowOpacity: 0.45,
+                  shadowRadius: 14,
+                  elevation: 8,
+                  transform: [{ rotate: '-4deg' }],
+                }}>
+                  <Icon name="trash" size={26} color="#FBF6EC"/>
+                </View>
+                <View style={{ alignItems: 'center', gap: 6 }}>
+                  <Text style={{
+                    fontFamily: fonts.display, fontSize: 24, color: colors.brick,
+                    letterSpacing: -0.25, lineHeight: 26, textAlign: 'center',
+                  }}>
+                    {t('settings.resetDataTitle')}
+                  </Text>
+                  <Text style={{
+                    fontFamily: fonts.mono, fontSize: 10.5, color: colors.inkMute,
+                    letterSpacing: 2, textTransform: 'uppercase',
+                  }}>
+                    {t('settings.resetDataNoUndo')}
+                  </Text>
+                </View>
+              </View>
+
+              <View style={{ paddingTop: 14, paddingHorizontal: 20, paddingBottom: 4 }}>
+                <Text style={{
+                  fontSize: 13, color: colors.inkSoft,
+                  fontFamily: fonts.body, lineHeight: 19,
+                  textAlign: 'center', paddingHorizontal: 4,
+                }}>
+                  {t('settings.resetDataBody')}
+                </Text>
+              </View>
+
+              <View style={{ padding: 20, paddingTop: 16, gap: 8 }}>
+                <Pressable
+                  onPress={executeReset}
+                  disabled={resetting}
+                  style={{
+                    height: 48, borderRadius: 14,
+                    backgroundColor: colors.brick,
+                    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+                    shadowColor: colors.brick,
+                    shadowOffset: { width: 0, height: 8 },
+                    shadowOpacity: 0.35,
+                    shadowRadius: 14,
+                    elevation: 6,
+                    opacity: resetting ? 0.6 : 1,
+                  }}
+                >
+                  <Icon name="trash" size={16} color="#FBF6EC"/>
+                  <Text style={{ fontFamily: fonts.bodySb, fontSize: 15, color: '#FBF6EC', letterSpacing: -0.1 }}>
+                    {t('settings.resetDataConfirm')}
+                  </Text>
+                </Pressable>
+                <Pressable
+                  onPress={() => setResetConfirmOpen(false)}
+                  disabled={resetting}
+                  style={{
+                    height: 44, borderRadius: 12,
+                    borderWidth: 1.5, borderColor: colors.rule,
+                    alignItems: 'center', justifyContent: 'center',
+                    opacity: resetting ? 0.6 : 1,
+                  }}
+                >
+                  <Text style={{ fontFamily: fonts.bodySb, fontSize: 14.5, color: colors.ink, letterSpacing: -0.1 }}>
+                    {t('common.keepIt')}
+                  </Text>
+                </Pressable>
+              </View>
+            </View>
+          </View>
+        </Modal>
+      )}
     </Screen>
   )
 }
