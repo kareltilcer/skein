@@ -193,6 +193,9 @@ type LibraryStore = {
   addSequence: (seq: LibrarySequence) => void
   addPattern: (pat: LibraryPattern) => void
   addRow: (row: LibraryRow) => void
+  updateSequence: (seq: LibrarySequence) => void
+  updatePattern: (pat: LibraryPattern) => void
+  updateRow: (row: LibraryRow) => void
   deleteSequence: (id: string) => void
   deletePattern: (id: string) => void
   deleteRow: (id: string) => void
@@ -209,6 +212,16 @@ export const useLibraryStore = create<LibraryStore>()(
       addPattern:  (pat)  => set((s) => ({ patterns:  [...s.patterns, pat]  })),
       addRow:      (row)  => set((s) => ({ rows:      [...s.rows, row]      })),
 
+      updateSequence: (seq) => set((s) => ({
+        sequences: s.sequences.map((x) => x.id === seq.id ? seq : x),
+      })),
+      updatePattern: (pat) => set((s) => ({
+        patterns: s.patterns.map((x) => x.id === pat.id ? pat : x),
+      })),
+      updateRow: (row) => set((s) => ({
+        rows: s.rows.map((x) => x.id === row.id ? row : x),
+      })),
+
       deleteSequence: (id) => set((s) => ({ sequences: s.sequences.filter((x) => x.id !== id) })),
       deletePattern:  (id) => set((s) => ({ patterns:  s.patterns.filter((x)  => x.id !== id) })),
       deleteRow:      (id) => set((s) => ({ rows:      s.rows.filter((x)      => x.id !== id) })),
@@ -216,7 +229,7 @@ export const useLibraryStore = create<LibraryStore>()(
     {
       name: 'skein-library',
       storage: createJSONStorage(() => AsyncStorage),
-      version: 1,
+      version: 2,
       migrate: (persistedState, _fromVersion) => {
         // No schema changes yet; this stub exists so a future field addition
         // has an obvious place to slot in a migration and bump version.

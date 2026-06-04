@@ -29,18 +29,21 @@ type Props = {
   visible: boolean
   onClose: () => void
   defaultCraft?: Craft
+  initialRow?: LibraryRow
 }
 
 function totalStitches(stitches: StitchInstance[]) {
   return stitches.reduce((a, s) => a + s.count, 0)
 }
 
-export default function NewRowScreen({ visible, onClose, defaultCraft = 'knit' }: Props) {
+export default function NewRowScreen({ visible, onClose, defaultCraft = 'knit', initialRow }: Props) {
   const { t } = useTranslation()
   const { colors, fonts, radius } = useTheme()
   const stitchMap = useStitchMap()
-  const { addRow } = useLibraryStore()
+  const { addRow, updateRow } = useLibraryStore()
   const recordStitchUsed = useSettingsStore(s => s.recordStitchUsed)
+
+  const isEditing = !!initialRow
 
   const [name,  setName]  = useState('')
   const [craft, setCraft] = useState<Craft>(defaultCraft)
@@ -56,14 +59,25 @@ export default function NewRowScreen({ visible, onClose, defaultCraft = 'knit' }
   // Reset state each time the sheet re-opens
   useEffect(() => {
     if (visible) {
-      setName('')
-      setCraft(defaultCraft)
-      setRow({ id: 'draft', label: '', stitches: [] })
+      if (initialRow) {
+        setName(initialRow.label)
+        setCraft(initialRow.craft)
+        setRow({
+          id: 'draft',
+          label: initialRow.label,
+          stitches: initialRow.stitches,
+          ...(initialRow.segments ? { segments: initialRow.segments } : {}),
+        })
+      } else {
+        setName('')
+        setCraft(defaultCraft)
+        setRow({ id: 'draft', label: '', stitches: [] })
+      }
       setMarking(null)
       setShowPicker(false)
       setShowDefineCustom(false)
     }
-  }, [visible, defaultCraft])
+  }, [visible, defaultCraft, initialRow])
 
   // Dock stitch ids — recent for current craft, then defaults. Snapshot held stable
   // while the dock is up (refreshed when the full picker closes).
@@ -134,15 +148,27 @@ export default function NewRowScreen({ visible, onClose, defaultCraft = 'knit' }
 
   const handleSave = () => {
     if (!ready) return
-    const newRow: LibraryRow = {
-      id: uuid(),
-      label: name.trim(),
-      craft,
-      stitches: row.stitches,
-      ...(row.segments ? { segments: row.segments } : {}),
-      isBuiltIn: false,
+    if (isEditing && initialRow) {
+      const updated: LibraryRow = {
+        id: initialRow.id,
+        label: name.trim(),
+        craft,
+        stitches: row.stitches,
+        ...(row.segments ? { segments: row.segments } : {}),
+        isBuiltIn: false,
+      }
+      updateRow(updated)
+    } else {
+      const newRow: LibraryRow = {
+        id: uuid(),
+        label: name.trim(),
+        craft,
+        stitches: row.stitches,
+        ...(row.segments ? { segments: row.segments } : {}),
+        isBuiltIn: false,
+      }
+      addRow(newRow)
     }
-    addRow(newRow)
     onClose()
   }
 
@@ -189,7 +215,7 @@ export default function NewRowScreen({ visible, onClose, defaultCraft = 'knit' }
                 <Text style={{
                   fontFamily: fonts.mono, fontSize: 9.5, color: colors.inkMute,
                   letterSpacing: 2, textTransform: 'uppercase',
-                }}>{t('libraryCreate.draftRow')}</Text>
+                }}>{isEditing ? t('libraryCreate.editRowBadge') : t('libraryCreate.draftRow')}</Text>
               </View>
               <Pressable onPress={ready ? handleSave : undefined} hitSlop={12}>
                 <Text style={{
@@ -204,11 +230,11 @@ export default function NewRowScreen({ visible, onClose, defaultCraft = 'knit' }
               <Text style={{
                 fontFamily: fonts.display, fontSize: 32, color: colors.brick,
                 letterSpacing: -0.5, lineHeight: 36,
-              }}>{t('libraryCreate.newRowTitle')}</Text>
+              }}>{isEditing ? t('libraryCreate.editRowTitle') : t('libraryCreate.newRowTitle')}</Text>
               <Text style={{
                 fontFamily: fonts.body, fontSize: 13.5, color: colors.inkSoft,
                 lineHeight: 20, marginTop: 6,
-              }}>{t('libraryCreate.newRowSub')}</Text>
+              }}>{isEditing ? t('libraryCreate.editRowSub') : t('libraryCreate.newRowSub')}</Text>
             </View>
 
             <ScrollView

@@ -44,6 +44,7 @@ type Props = {
   visible: boolean
   onClose: () => void
   defaultCraft?: Craft
+  initialPattern?: LibraryPattern
 }
 
 type DraftRow = {
@@ -58,6 +59,7 @@ type DraftSequence = {
   rows: DraftRow[]
   totalRepeats: number
   loop: boolean
+  linkedSeqId?: string
 }
 type DraftPart = {
   id: string
@@ -68,7 +70,7 @@ type DraftPart = {
 type ActiveRow = { partIdx: number; seqIdx: number; rowIdx: number }
 type Marking = ActiveRow & { step: 'start' | 'end'; start: number | null }
 
-export default function NewPatternScreen({ visible, onClose, defaultCraft = 'knit' }: Props) {
+export default function NewPatternScreen({ visible, onClose, defaultCraft = 'knit', initialPattern }: Props) {
   const { t } = useTranslation()
   const { colors, fonts, radius } = useTheme()
   const stitchMap = useStitchMap()
@@ -76,7 +78,9 @@ export default function NewPatternScreen({ visible, onClose, defaultCraft = 'kni
   const librarySequences = useLibraryStore(s => s.sequences)
   const libraryPatterns  = useLibraryStore(s => s.patterns)
   const libraryRows      = useLibraryStore(s => s.rows)
-  const { addPattern, addSequence } = useLibraryStore()
+  const { addPattern, addSequence, updatePattern } = useLibraryStore()
+
+  const isEditing = !!initialPattern
 
   const [name,  setName]  = useState('')
   const [craft, setCraft] = useState<Craft>(defaultCraft)
@@ -121,11 +125,39 @@ export default function NewPatternScreen({ visible, onClose, defaultCraft = 'kni
 
   useEffect(() => {
     if (visible) {
-      setName('')
-      setCraft(defaultCraft)
-      const first: DraftPart = { id: uuid(), name: t('libraryCreate.partDefaultLabel', { n: 1 }), sequences: [] }
-      setParts([first])
-      setActivePartIdx(0)
+      if (initialPattern) {
+        setName(initialPattern.name)
+        setCraft(initialPattern.craft)
+        const linkedSequences: DraftSequence[] = initialPattern.sequenceIds
+          .map(id => librarySequences.find(s => s.id === id))
+          .filter((s): s is LibrarySequence => Boolean(s))
+          .map(libSeq => ({
+            id: uuid(),
+            name: libSeq.name,
+            rows: libSeq.rows.map(r => ({
+              id: uuid(),
+              label: r.label,
+              stitches: r.stitches,
+              ...(r.segments ? { segments: r.segments } : {}),
+            })),
+            totalRepeats: libSeq.totalRepeats,
+            loop: libSeq.loop,
+            linkedSeqId: libSeq.id,
+          }))
+        const first: DraftPart = {
+          id: uuid(),
+          name: t('libraryCreate.partDefaultLabel', { n: 1 }),
+          sequences: linkedSequences,
+        }
+        setParts([first])
+        setActivePartIdx(0)
+      } else {
+        setName('')
+        setCraft(defaultCraft)
+        const first: DraftPart = { id: uuid(), name: t('libraryCreate.partDefaultLabel', { n: 1 }), sequences: [] }
+        setParts([first])
+        setActivePartIdx(0)
+      }
       setActiveRow(null)
       setFocusedSeq(null)
       setCollapsedSeqs(new Set())
@@ -138,7 +170,8 @@ export default function NewPatternScreen({ visible, onClose, defaultCraft = 'kni
       setConfirmDialog(null)
       setConfirmSeqDialog(null)
     }
-  }, [visible, defaultCraft, t])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visible, defaultCraft, t, initialPattern])
 
   // Dock stitches — mirrors Step3/NewSequenceScreen so behaviour stays consistent across creators.
   const computeDockIds = useCallback((): string[] => {
@@ -287,6 +320,7 @@ export default function NewPatternScreen({ visible, onClose, defaultCraft = 'kni
       id: uuid(), name: libSeq.name,
       rows: libSeq.rows.map(r => ({ id: uuid(), label: r.label, stitches: r.stitches, segments: r.segments })),
       totalRepeats: libSeq.totalRepeats, loop: libSeq.loop,
+      linkedSeqId: libSeq.id,
     }
     setParts(ps => ps.map((p, i) => i === activePartIdx ? { ...p, sequences: [...p.sequences, newSeq] } : p))
     setShowSeqPicker(false)
@@ -457,6 +491,10 @@ export default function NewPatternScreen({ visible, onClose, defaultCraft = 'kni
       for (const ds of p.sequences) {
         const nonEmptyRows = ds.rows.filter(r => r.stitches.length > 0) as Row[]
         if (nonEmptyRows.length === 0) continue
+        if (ds.linkedSeqId && librarySequences.some(s => s.id === ds.linkedSeqId)) {
+          sequenceIds.push(ds.linkedSeqId)
+          continue
+        }
         const seq: LibrarySequence = {
           id: uuid(),
           name: ds.name.trim() || t('libraryCreate.untitledSeq'),
@@ -470,14 +508,25 @@ export default function NewPatternScreen({ visible, onClose, defaultCraft = 'kni
         sequenceIds.push(seq.id)
       }
     }
-    const pat: LibraryPattern = {
-      id: uuid(),
-      name: name.trim(),
-      craft,
-      sequenceIds,
-      isBuiltIn: false,
+    if (isEditing && initialPattern) {
+      const updated: LibraryPattern = {
+        id: initialPattern.id,
+        name: name.trim(),
+        craft,
+        sequenceIds,
+        isBuiltIn: false,
+      }
+      updatePattern(updated)
+    } else {
+      const pat: LibraryPattern = {
+        id: uuid(),
+        name: name.trim(),
+        craft,
+        sequenceIds,
+        isBuiltIn: false,
+      }
+      addPattern(pat)
     }
-    addPattern(pat)
     onClose()
   }
 
@@ -512,7 +561,7 @@ export default function NewPatternScreen({ visible, onClose, defaultCraft = 'kni
                 <Text style={{
                   fontFamily: fonts.mono, fontSize: 9.5, color: colors.inkMute,
                   letterSpacing: 2, textTransform: 'uppercase',
-                }}>{t('libraryCreate.draftPattern')}</Text>
+                }}>{isEditing ? t('libraryCreate.editPatternBadge') : t('libraryCreate.draftPattern')}</Text>
               </View>
               <Pressable onPress={ready ? handleSave : undefined} hitSlop={12}>
                 <Text style={{
@@ -527,11 +576,11 @@ export default function NewPatternScreen({ visible, onClose, defaultCraft = 'kni
               <Text style={{
                 fontFamily: fonts.display, fontSize: 32, color: colors.brick,
                 letterSpacing: -0.5, lineHeight: 36,
-              }}>{t('libraryCreate.newPatternTitle')}</Text>
+              }}>{isEditing ? t('libraryCreate.editPatternTitle') : t('libraryCreate.newPatternTitle')}</Text>
               <Text style={{
                 fontFamily: fonts.body, fontSize: 13.5, color: colors.inkSoft,
                 lineHeight: 20, marginTop: 6,
-              }}>{t('libraryCreate.newPatternSub')}</Text>
+              }}>{isEditing ? t('libraryCreate.editPatternSub') : t('libraryCreate.newPatternSub')}</Text>
             </View>
 
             <NestableScrollContainer

@@ -34,6 +34,7 @@ type Props = {
   visible: boolean
   onClose: () => void
   defaultCraft?: Craft
+  initialSequence?: LibrarySequence
 }
 
 function totalStitches(stitches: StitchInstance[]) {
@@ -44,12 +45,14 @@ function makeEmptyRow(label: string): Row {
   return { id: uuid(), label, stitches: [] }
 }
 
-export default function NewSequenceScreen({ visible, onClose, defaultCraft = 'knit' }: Props) {
+export default function NewSequenceScreen({ visible, onClose, defaultCraft = 'knit', initialSequence }: Props) {
   const { t } = useTranslation()
   const { colors, fonts, radius } = useTheme()
   const stitchMap = useStitchMap()
-  const { addSequence, rows: libraryRows } = useLibraryStore()
+  const { addSequence, updateSequence, rows: libraryRows } = useLibraryStore()
   const recordStitchUsed = useSettingsStore(s => s.recordStitchUsed)
+
+  const isEditing = !!initialSequence
 
   const [name,  setName]  = useState('')
   const [craft, setCraft] = useState<Craft>(defaultCraft)
@@ -62,16 +65,29 @@ export default function NewSequenceScreen({ visible, onClose, defaultCraft = 'kn
   // Initialise with one empty row + focus it
   useEffect(() => {
     if (visible) {
-      setName('')
-      setCraft(defaultCraft)
-      const first = makeEmptyRow(t('libraryCreate.rowDefaultLabel', { n: 1 }))
-      setRows([first])
-      setFocusedRowIdx(0)
+      if (initialSequence) {
+        setName(initialSequence.name)
+        setCraft(initialSequence.craft)
+        // Clone rows with fresh draft ids so internal list keying is stable
+        setRows(initialSequence.rows.map(r => ({
+          id: uuid(),
+          label: r.label,
+          stitches: r.stitches,
+          ...(r.segments ? { segments: r.segments } : {}),
+        })))
+        setFocusedRowIdx(null)
+      } else {
+        setName('')
+        setCraft(defaultCraft)
+        const first = makeEmptyRow(t('libraryCreate.rowDefaultLabel', { n: 1 }))
+        setRows([first])
+        setFocusedRowIdx(0)
+      }
       setShowStitchPicker(false)
       setShowRowPicker(false)
       setShowDefineCustom(false)
     }
-  }, [visible, defaultCraft, t])
+  }, [visible, defaultCraft, t, initialSequence])
 
   const filledRows = rows.filter(r => r.stitches.length > 0).length
   const totalSts = rows.reduce((a, r) => a + totalStitches(r.stitches), 0)
@@ -163,16 +179,30 @@ export default function NewSequenceScreen({ visible, onClose, defaultCraft = 'kn
 
   const handleSave = () => {
     if (!ready) return
-    const seq: LibrarySequence = {
-      id: uuid(),
-      name: name.trim(),
-      craft,
-      rows: rows.filter(r => r.stitches.length > 0),
-      totalRepeats: 1,
-      loop: false,
-      isBuiltIn: false,
+    const filledRowsOnly = rows.filter(r => r.stitches.length > 0)
+    if (isEditing && initialSequence) {
+      const updated: LibrarySequence = {
+        id: initialSequence.id,
+        name: name.trim(),
+        craft,
+        rows: filledRowsOnly,
+        totalRepeats: initialSequence.totalRepeats,
+        loop: initialSequence.loop,
+        isBuiltIn: false,
+      }
+      updateSequence(updated)
+    } else {
+      const seq: LibrarySequence = {
+        id: uuid(),
+        name: name.trim(),
+        craft,
+        rows: filledRowsOnly,
+        totalRepeats: 1,
+        loop: false,
+        isBuiltIn: false,
+      }
+      addSequence(seq)
     }
-    addSequence(seq)
     onClose()
   }
 
@@ -497,7 +527,7 @@ export default function NewSequenceScreen({ visible, onClose, defaultCraft = 'kn
                 <Text style={{
                   fontFamily: fonts.mono, fontSize: 9.5, color: colors.inkMute,
                   letterSpacing: 2, textTransform: 'uppercase',
-                }}>{t('libraryCreate.draftSeq')}</Text>
+                }}>{isEditing ? t('libraryCreate.editSeqBadge') : t('libraryCreate.draftSeq')}</Text>
               </View>
               <Pressable onPress={ready ? handleSave : undefined} hitSlop={12}>
                 <Text style={{
@@ -512,11 +542,11 @@ export default function NewSequenceScreen({ visible, onClose, defaultCraft = 'kn
               <Text style={{
                 fontFamily: fonts.display, fontSize: 32, color: colors.brick,
                 letterSpacing: -0.5, lineHeight: 36,
-              }}>{t('libraryCreate.newSeqTitle')}</Text>
+              }}>{isEditing ? t('libraryCreate.editSeqTitle') : t('libraryCreate.newSeqTitle')}</Text>
               <Text style={{
                 fontFamily: fonts.body, fontSize: 13.5, color: colors.inkSoft,
                 lineHeight: 20, marginTop: 6,
-              }}>{t('libraryCreate.newSeqSub')}</Text>
+              }}>{isEditing ? t('libraryCreate.editSeqSub') : t('libraryCreate.newSeqSub')}</Text>
             </View>
 
             <DraggableFlatList

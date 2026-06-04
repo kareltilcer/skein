@@ -66,6 +66,9 @@ function RootLayout() {
         <Stack.Screen name="(tabs)"/>
         <Stack.Screen name="setup/index" options={{ animation: 'slide_from_bottom' }}/>
         <Stack.Screen name="project/[id]" options={{ animation: 'slide_from_right' }}/>
+        <Stack.Screen name="library/sequence/[id]" options={{ animation: 'slide_from_right' }}/>
+        <Stack.Screen name="library/pattern/[id]" options={{ animation: 'slide_from_right' }}/>
+        <Stack.Screen name="library/row/[id]" options={{ animation: 'slide_from_right' }}/>
         <Stack.Screen name="settings/language" options={{ animation: 'slide_from_right' }}/>
       </Stack>
       <StatusBar style={theme === 'dark' ? 'light' : 'dark'}/>

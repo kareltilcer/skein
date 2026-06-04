@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react'
 import { View, Text, ScrollView, TextInput, Pressable, StyleSheet } from 'react-native'
 
 import { LinearGradient } from 'expo-linear-gradient'
+import { useRouter } from 'expo-router'
 import { useTranslation } from 'react-i18next'
 import { useTheme } from '../theme/ThemeContext'
 import { useLibraryStore } from '../store/libraryStore'
@@ -11,6 +12,8 @@ import AppBar from '../components/ui/AppBar'
 import Icon from '../components/ui/Icon'
 import StitchGlyph from '../components/StitchGlyph'
 import { useStitchMap } from '../hooks/useStitchMap'
+import LibraryItemMenu from '../components/library/LibraryItemMenu'
+import ConfirmDeleteDialog from '../components/library/ConfirmDeleteDialog'
 import NewRowScreen from './library/NewRowScreen'
 import NewSequenceScreen from './library/NewSequenceScreen'
 import NewPatternScreen from './library/NewPatternScreen'
@@ -19,13 +22,43 @@ import type { Craft, LibrarySequence, LibraryPattern, LibraryRow } from '../type
 type Tab = 'pat' | 'seq' | 'row'
 type CraftFilter = Craft | 'all'
 
-function SequenceCard({ seq }: { seq: LibrarySequence }) {
+type EditingState =
+  | { kind: 'seq'; item: LibrarySequence }
+  | { kind: 'pat'; item: LibraryPattern }
+  | { kind: 'row'; item: LibraryRow }
+  | null
+
+type DeleteState =
+  | { kind: 'seq'; item: LibrarySequence }
+  | { kind: 'pat'; item: LibraryPattern }
+  | { kind: 'row'; item: LibraryRow }
+  | null
+
+function SequenceCard({
+  seq, onPress, onEdit, onDelete,
+}: {
+  seq: LibrarySequence
+  onPress: () => void
+  onEdit: () => void
+  onDelete: () => void
+}) {
   const { t } = useTranslation()
   const { colors, fonts, fontSize, spacing, radius } = useTheme()
   const stitchMap = useStitchMap()
   const previewStitches = seq.rows[0]?.stitches.slice(0, 4) ?? []
   return (
-    <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.rule, borderRadius: radius.lg }]}>
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.card,
+        {
+          backgroundColor: colors.card,
+          borderColor: colors.rule,
+          borderRadius: radius.lg,
+          opacity: pressed ? 0.85 : 1,
+        },
+      ]}
+    >
       <View style={styles.cardRow}>
         <View style={[styles.thumbBox, { backgroundColor: colors.cream2, borderRadius: radius.md }]}>
           <View style={styles.thumbGlyphs}>
@@ -44,16 +77,39 @@ function SequenceCard({ seq }: { seq: LibrarySequence }) {
             {t('library.rowsMeta', { count: seq.rows.length, craft: t(`craft.${seq.craft}`) })}
           </Text>
         </View>
+        <LibraryItemMenu
+          label={t('library.kindSequence')}
+          onEdit={onEdit}
+          onDelete={onDelete}
+        />
       </View>
-    </View>
+    </Pressable>
   )
 }
 
-function PatternCard({ pat }: { pat: LibraryPattern }) {
+function PatternCard({
+  pat, onPress, onEdit, onDelete,
+}: {
+  pat: LibraryPattern
+  onPress: () => void
+  onEdit: () => void
+  onDelete: () => void
+}) {
   const { t } = useTranslation()
   const { colors, fonts, fontSize, spacing, radius } = useTheme()
   return (
-    <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.rule, borderRadius: radius.lg }]}>
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.card,
+        {
+          backgroundColor: colors.card,
+          borderColor: colors.rule,
+          borderRadius: radius.lg,
+          opacity: pressed ? 0.85 : 1,
+        },
+      ]}
+    >
       <View style={styles.cardRow}>
         <View style={[styles.thumbBox, { backgroundColor: colors.cream2, borderRadius: radius.md }]}>
           <Icon name="book" size={22} color={colors.brick}/>
@@ -66,19 +122,42 @@ function PatternCard({ pat }: { pat: LibraryPattern }) {
             {t('library.seqsMeta', { count: pat.sequenceIds.length, craft: t(`craft.${pat.craft}`) })}
           </Text>
         </View>
+        <LibraryItemMenu
+          label={t('library.kindPattern')}
+          onEdit={onEdit}
+          onDelete={onDelete}
+        />
       </View>
-    </View>
+    </Pressable>
   )
 }
 
-function RowCard({ row }: { row: LibraryRow }) {
+function RowCard({
+  row, onPress, onEdit, onDelete,
+}: {
+  row: LibraryRow
+  onPress: () => void
+  onEdit: () => void
+  onDelete: () => void
+}) {
   const { t } = useTranslation()
   const { colors, fonts, fontSize, spacing, radius } = useTheme()
   const stitchMap = useStitchMap()
   const preview = row.stitches.slice(0, 5)
   const hasRepeat = !!row.segments
   return (
-    <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.rule, borderRadius: radius.lg }]}>
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.card,
+        {
+          backgroundColor: colors.card,
+          borderColor: colors.rule,
+          borderRadius: radius.lg,
+          opacity: pressed ? 0.85 : 1,
+        },
+      ]}
+    >
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
         <Text style={{ flex: 1, fontFamily: fonts.bodySb, fontSize: fontSize.sm, color: colors.ink }} numberOfLines={1}>
           {row.label}
@@ -96,6 +175,11 @@ function RowCard({ row }: { row: LibraryRow }) {
             }}>{t('wizard.step3RepeatTag')}</Text>
           </View>
         )}
+        <LibraryItemMenu
+          label={t('library.kindRow')}
+          onEdit={onEdit}
+          onDelete={onDelete}
+        />
       </View>
       <View style={[styles.glyphRow, { marginTop: spacing[2] }]}>
         {preview.map((si, i) => {
@@ -109,7 +193,7 @@ function RowCard({ row }: { row: LibraryRow }) {
           )
         })}
       </View>
-    </View>
+    </Pressable>
   )
 }
 
@@ -127,16 +211,22 @@ function EmptyState() {
 }
 
 export default function LibraryScreen() {
+  const router = useRouter()
   const { t } = useTranslation()
   const { colors, fonts, fontSize, spacing, radius } = useTheme()
   const sequences = useLibraryStore((s) => s.sequences)
   const patterns  = useLibraryStore((s) => s.patterns)
   const rows      = useLibraryStore((s) => s.rows)
+  const deleteSequence = useLibraryStore((s) => s.deleteSequence)
+  const deletePattern  = useLibraryStore((s) => s.deletePattern)
+  const deleteRow      = useLibraryStore((s) => s.deleteRow)
   const defaultCraft = useSettingsStore((s) => s.defaultCraft)
   const [tab, setTab] = useState<Tab>('seq')
   const [craft, setCraft] = useState<CraftFilter>(defaultCraft)
   const [query, setQuery] = useState('')
   const [openCreator, setOpenCreator] = useState<Tab | null>(null)
+  const [editing, setEditing] = useState<EditingState>(null)
+  const [confirmDelete, setConfirmDelete] = useState<DeleteState>(null)
 
   const modalCraft: Craft = craft === 'all' ? defaultCraft : craft
 
@@ -174,6 +264,42 @@ export default function LibraryScreen() {
     seq: t('library.kindSequence'),
     row: t('library.kindRow'),
   }
+
+  const onConfirmDelete = () => {
+    if (!confirmDelete) return
+    if (confirmDelete.kind === 'seq') deleteSequence(confirmDelete.item.id)
+    if (confirmDelete.kind === 'pat') deletePattern(confirmDelete.item.id)
+    if (confirmDelete.kind === 'row') deleteRow(confirmDelete.item.id)
+    setConfirmDelete(null)
+  }
+
+  const deleteDialogProps = (() => {
+    if (!confirmDelete) {
+      return { title: '', body: '', confirmLabel: '', itemName: '' }
+    }
+    if (confirmDelete.kind === 'pat') {
+      return {
+        title: t('library.deletePatternTitle'),
+        body: t('library.deletePatternBody'),
+        confirmLabel: t('library.deletePatternConfirm'),
+        itemName: confirmDelete.item.name,
+      }
+    }
+    if (confirmDelete.kind === 'seq') {
+      return {
+        title: t('library.deleteSequenceTitle'),
+        body: t('library.deleteSequenceBody'),
+        confirmLabel: t('library.deleteSequenceConfirm'),
+        itemName: confirmDelete.item.name,
+      }
+    }
+    return {
+      title: t('library.deleteRowTitle'),
+      body: t('library.deleteRowBody'),
+      confirmLabel: t('library.deleteRowConfirm'),
+      itemName: confirmDelete.item.label,
+    }
+  })()
 
   return (
     <Screen>
@@ -241,12 +367,12 @@ export default function LibraryScreen() {
 
         {/* Tabs */}
         <View style={[styles.tabRow, { backgroundColor: colors.cream2, borderRadius: radius.md }]}>
-          {TABS.map((t) => {
-            const active = tab === t.id
+          {TABS.map((tabDef) => {
+            const active = tab === tabDef.id
             return (
               <Pressable
-                key={t.id}
-                onPress={() => setTab(t.id)}
+                key={tabDef.id}
+                onPress={() => setTab(tabDef.id)}
                 style={[
                   styles.tabBtn,
                   {
@@ -257,10 +383,10 @@ export default function LibraryScreen() {
                 ]}
               >
                 <Text style={{ fontFamily: fonts.bodySb, fontSize: 13, color: active ? colors.brick : colors.inkSoft }}>
-                  {t.label}
+                  {tabDef.label}
                 </Text>
                 <Text style={{ fontFamily: fonts.mono, fontSize: 10, color: active ? colors.brick : colors.inkMute, backgroundColor: active ? colors.cream2 : 'transparent', paddingHorizontal: 6, paddingVertical: 1, borderRadius: 5 }}>
-                  {counts[t.id]}
+                  {counts[tabDef.id]}
                 </Text>
               </Pressable>
             )
@@ -271,35 +397,72 @@ export default function LibraryScreen() {
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: spacing[5], gap: spacing[3] }}>
         {tab === 'seq' && (
           visibleSeqs.length > 0
-            ? visibleSeqs.map((s) => <SequenceCard key={s.id} seq={s}/>)
+            ? visibleSeqs.map((s) => (
+                <SequenceCard
+                  key={s.id}
+                  seq={s}
+                  onPress={() => router.push(`/library/sequence/${s.id}`)}
+                  onEdit={() => setEditing({ kind: 'seq', item: s })}
+                  onDelete={() => setConfirmDelete({ kind: 'seq', item: s })}
+                />
+              ))
             : <EmptyState/>
         )}
         {tab === 'pat' && (
           visiblePats.length > 0
-            ? visiblePats.map((p) => <PatternCard key={p.id} pat={p}/>)
+            ? visiblePats.map((p) => (
+                <PatternCard
+                  key={p.id}
+                  pat={p}
+                  onPress={() => router.push(`/library/pattern/${p.id}`)}
+                  onEdit={() => setEditing({ kind: 'pat', item: p })}
+                  onDelete={() => setConfirmDelete({ kind: 'pat', item: p })}
+                />
+              ))
             : <EmptyState/>
         )}
         {tab === 'row' && (
           visibleRows.length > 0
-            ? visibleRows.map((r) => <RowCard key={r.id} row={r}/>)
+            ? visibleRows.map((r) => (
+                <RowCard
+                  key={r.id}
+                  row={r}
+                  onPress={() => router.push(`/library/row/${r.id}`)}
+                  onEdit={() => setEditing({ kind: 'row', item: r })}
+                  onDelete={() => setConfirmDelete({ kind: 'row', item: r })}
+                />
+              ))
             : <EmptyState/>
         )}
       </ScrollView>
 
       <NewRowScreen
-        visible={openCreator === 'row'}
-        onClose={() => setOpenCreator(null)}
+        visible={openCreator === 'row' || editing?.kind === 'row'}
+        onClose={() => { setOpenCreator(null); setEditing(null) }}
         defaultCraft={modalCraft}
+        initialRow={editing?.kind === 'row' ? editing.item : undefined}
       />
       <NewSequenceScreen
-        visible={openCreator === 'seq'}
-        onClose={() => setOpenCreator(null)}
+        visible={openCreator === 'seq' || editing?.kind === 'seq'}
+        onClose={() => { setOpenCreator(null); setEditing(null) }}
         defaultCraft={modalCraft}
+        initialSequence={editing?.kind === 'seq' ? editing.item : undefined}
       />
       <NewPatternScreen
-        visible={openCreator === 'pat'}
-        onClose={() => setOpenCreator(null)}
+        visible={openCreator === 'pat' || editing?.kind === 'pat'}
+        onClose={() => { setOpenCreator(null); setEditing(null) }}
         defaultCraft={modalCraft}
+        initialPattern={editing?.kind === 'pat' ? editing.item : undefined}
+      />
+
+      <ConfirmDeleteDialog
+        visible={!!confirmDelete}
+        onCancel={() => setConfirmDelete(null)}
+        onConfirm={onConfirmDelete}
+        title={deleteDialogProps.title}
+        body={deleteDialogProps.body}
+        confirmLabel={deleteDialogProps.confirmLabel}
+        itemName={deleteDialogProps.itemName}
       />
     </Screen>
   )
