@@ -186,7 +186,7 @@
     "cloudBody": "Still on the needles — cross-device sync and cloud backup is coming in a future updates. For now, your projects stay snug right here on this device.",
     "more": "More",
     "tellAFriend": "Tell a friend (please?)",
-    "resetData": "Reset Skein data",
+    "resetData": "Reset YarnLog data",
     "resetDataTitle": "Wipe everything?",
     "resetDataNoUndo": "No undo · data gone",
     "resetDataBody": "Removes every project and your custom library and stitches. Your theme, language, and preferences are kept. Useful if something looks broken — or you just want a clean slate.",

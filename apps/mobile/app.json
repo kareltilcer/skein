@@ -1,21 +1,39 @@
 {
   "expo": {
     "name": "YarnLog",
-    "slug": "skein",
+    "slug": "yarnlog",
     "version": "1.0.0",
     "orientation": "portrait",
-    "scheme": "skein",
+    "scheme": "yarnlog",
     "newArchEnabled": true,
+    "description": "Plan projects, log rows, and keep your yarn library — quietly, offline, and yours.",
+    "userInterfaceStyle": "automatic",
+    "icon": "./assets/icon.png",
     "ios": {
-      "bundleIdentifier": "com.skein.app",
+      "bundleIdentifier": "com.yarnlog.app",
       "supportsTablet": true
     },
     "android": {
-      "package": "com.skein.app"
+      "package": "com.yarnlog.app",
+      "versionCode": 1,
+      "permissions": [],
+      "edgeToEdgeEnabled": true,
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#F2EBDD"
+      }
     },
     "plugins": [
       "expo-router",
-      "expo-localization"
+      "expo-localization",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash.png",
+          "backgroundColor": "#F2EBDD",
+          "imageWidth": 200
+        }
+      ]
     ]
   }
 }

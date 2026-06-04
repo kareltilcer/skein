@@ -186,7 +186,7 @@
     "cloudBody": "Noch auf den Nadeln — Synchronisation und Cloud-Backup kommen in einem späteren Update. Deine Projekte bleiben bis dahin gemütlich auf diesem Gerät.",
     "more": "Mehr",
     "tellAFriend": "Erzähl's einer Freundin (bitte?)",
-    "resetData": "Skein-Daten zurücksetzen",
+    "resetData": "YarnLog-Daten zurücksetzen",
     "resetDataTitle": "Alles löschen?",
     "resetDataNoUndo": "Kein Zurück · Daten weg",
     "resetDataBody": "Entfernt jedes Projekt sowie deine eigene Bibliothek und Maschen. Theme, Sprache und Einstellungen bleiben erhalten. Hilfreich, wenn etwas kaputt wirkt — oder du einfach frisch starten willst.",
