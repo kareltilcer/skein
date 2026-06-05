@@ -20,6 +20,7 @@ import SeqPickerModal from '../../components/pickers/SeqPickerModal'
 import DefineCustomStitchScreen from './DefineCustomStitchScreen'
 import {useLibraryStore} from '../../store/libraryStore'
 import type {StitchInstance, Craft, StitchDef, LibraryRow, LibrarySequence, LibraryPattern, RowSegment} from '../../types'
+import {YARN_WEIGHTS, YARN_COLORS, PART_COLORS, PROJECT_NAME_MAX} from '../../types'
 import RepeatRowBody from '../../components/RepeatRow/RepeatRowBody'
 import {StitchTile} from '../../components/RepeatRow/RepeatTiles'
 import {KNIT_SIZES, CROCHET_SIZES, KNIT_NEEDLE_TYPES} from '../../tokens/needleSizes'
@@ -35,10 +36,7 @@ import _DraggableFlatList, {ScaleDecorator as _ScaleDecorator} from 'react-nativ
 const DraggableFlatList = _DraggableFlatList as any
 const ScaleDecorator = _ScaleDecorator as any
 
-const YARN_WEIGHTS = ['Lace', 'Fingering', 'Sport', 'DK', 'Worsted', 'Aran', 'Bulky', 'Chunky', 'Jumbo']
-const YARN_COLORS = ['#9C3D2E', '#D4923B', '#3F6B4A', '#8B5CF6', '#3B82F6', '#EC4899', '#F59E0B', '#6EE7B7']
-const PART_COLORS = ['#9C3D2E', '#D4923B', '#3F6B4A', '#7A5A8C', '#3B5B7A', '#C2547B']
-const MAX_NAME = 60
+const MAX_NAME = PROJECT_NAME_MAX
 
 type DraftPart = {
     id: string; name: string; color: string; notes?: string

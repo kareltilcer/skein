@@ -1,0 +1,120 @@
+.rowsList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-left: 12px;
+  border-left: 2px solid var(--color-cream2);
+  margin-left: 4px;
+}
+
+.rowCard {
+  background: var(--color-card);
+  border: 1px solid var(--color-rule);
+  border-radius: 14px;
+  padding: 10px 12px;
+  cursor: pointer;
+  transition: border-color 0.12s ease, box-shadow 0.12s ease;
+}
+
+.rowCardActive {
+  border-color: var(--color-brick);
+  border-width: 2px;
+  box-shadow: 0 0 0 4px rgba(156, 61, 46, 0.07);
+}
+
+:global([data-theme='dark']) .rowCardActive {
+  box-shadow: 0 0 0 4px rgba(255, 122, 77, 0.10);
+}
+
+.rowHead {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.rowLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.rowLabelInput {
+  background: transparent;
+  border: 0;
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--color-ink);
+  width: 110px;
+  padding: 2px 4px;
+  border-radius: 6px;
+  outline: none;
+}
+.rowLabelInput:focus { background: var(--color-cream2); }
+
+.activeStar {
+  color: var(--color-brick);
+  font-weight: 700;
+}
+
+.rowMeta {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--color-inkMute);
+}
+
+.emptyRow {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--color-inkMute);
+  font-style: italic;
+  padding: 6px 0 2px;
+  margin: 0;
+}
+
+.tilesRow {
+  display: flex;
+  gap: 3px;
+  flex-wrap: wrap;
+  row-gap: 20px;
+}
+
+/* ─── Mark instruction bar (replaces dock while marking) ─────── */
+.markBar {
+  position: sticky;
+  bottom: 0;
+  background: var(--color-bg);
+  border-top: 1px solid var(--color-rule);
+  padding: 12px 20px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--color-brick);
+}
+
+.markBarStep {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  color: var(--color-brick);
+}
+
+.markBarText {
+  flex: 1;
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 13.5px;
+  color: var(--color-ink);
+}
+
+.markBarCancel {
+  background: transparent;
+  border: 1px solid var(--color-rule);
+  color: var(--color-inkSoft);
+  border-radius: 9px;
+  padding: 6px 12px;
+  cursor: pointer;
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 12.5px;
+}

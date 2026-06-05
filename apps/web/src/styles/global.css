@@ -1,0 +1,69 @@
+/* CSS reset + base palette. ThemeProvider overrides the --color-* vars on
+   :root when the theme switches. */
+*,
+*::before,
+*::after { box-sizing: border-box; }
+
+html, body, #root {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+}
+
+body {
+  font-family: var(--font-body, 'DM Sans'), system-ui, sans-serif;
+  color: var(--color-ink, #2B1810);
+  background: var(--color-bg, #F2EBDD);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+  border: 0;
+  background: none;
+  color: inherit;
+}
+
+input, textarea, select {
+  font-family: inherit;
+  color: inherit;
+}
+
+a { color: inherit; text-decoration: none; }
+
+::selection {
+  background: rgba(212, 146, 59, 0.35);
+}
+
+/* Slim warm scrollbars matching the design's folk palette. */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-thumb {
+  background: rgba(138, 117, 96, 0.35);
+  border-radius: 8px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(138, 117, 96, 0.55);
+  background-clip: padding-box;
+}
+::-webkit-scrollbar-track { background: transparent; }
+
+@keyframes yl-fade {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes yl-pop {
+  from { opacity: 0; transform: scale(0.96); }
+  to   { opacity: 1; transform: scale(1); }
+}
+@keyframes yl-scrim {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes yl-stitch-in {
+  from { opacity: 0; transform: translateY(6px) scale(0.92); }
+  to   { opacity: 1; transform: none; }
+}

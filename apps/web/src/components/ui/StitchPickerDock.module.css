@@ -1,0 +1,71 @@
+.dock {
+  background: var(--color-bg);
+  border-top: 1px solid var(--color-rule);
+  padding: 10px 20px 16px;
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  gap: 10px;
+}
+
+.caption {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--color-brick);
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+.allLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  color: var(--color-brick);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 6px;
+}
+
+.tile {
+  background: var(--color-card);
+  border: 1px solid var(--color-rule);
+  border-radius: 10px;
+  padding: 6px 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  cursor: pointer;
+  transition: background 0.12s ease;
+}
+.tile:hover { background: var(--color-cream2); }
+
+.glyph {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.abbr {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  font-weight: 700;
+  color: var(--color-inkSoft);
+}

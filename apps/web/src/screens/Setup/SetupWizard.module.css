@@ -1,0 +1,919 @@
+.shell {
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  min-height: calc(100vh - 0px);
+  gap: 0;
+}
+
+@media (max-width: 900px) {
+  .shell { grid-template-columns: 1fr; }
+  .rail { display: none; }
+}
+
+.rail {
+  border-right: 1px solid var(--color-rule);
+  padding: 32px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  position: sticky;
+  top: 0;
+  align-self: start;
+}
+
+.railItem {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  font-size: 14px;
+  color: var(--color-inkSoft);
+  cursor: pointer;
+  background: transparent;
+  border: 1px solid transparent;
+  text-align: left;
+  width: 100%;
+  transition: background 0.12s ease, border-color 0.12s ease, color 0.12s ease;
+}
+.railItem:hover { background: var(--color-card); color: var(--color-ink); }
+
+.railActive {
+  background: var(--color-card);
+  border-color: var(--color-brick);
+  color: var(--color-brick);
+}
+
+.railDone .railIdx {
+  background: var(--color-forest);
+  border-color: var(--color-forest);
+  color: #FBF6EC;
+}
+
+.railIdx {
+  width: 36px;
+  height: 36px;
+  border-radius: 11px;
+  background: var(--color-cream2);
+  border: 1.5px solid var(--color-cream2);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-display);
+  font-size: 16px;
+  color: var(--color-inkMute);
+  flex-shrink: 0;
+  transition: background 0.12s ease;
+}
+.railActive .railIdx {
+  background: var(--color-brick);
+  border-color: var(--color-brick);
+  color: #FBF6EC;
+}
+
+.railText {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.railTitle {
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 15px;
+  color: var(--color-ink);
+}
+.railActive .railTitle { color: var(--color-brick); }
+
+.railSub {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--color-inkMute);
+  letter-spacing: 0.4px;
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  padding-bottom: 100px;
+}
+
+.content {
+  flex: 1;
+  padding: 40px 56px;
+  max-width: 880px;
+  margin: 0 auto;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.input {
+  height: 52px;
+  padding: 0 16px;
+  border-radius: 14px;
+  border: 1.5px solid var(--color-rule);
+  background: var(--color-card);
+  color: var(--color-ink);
+  font-size: 16px;
+  font-family: var(--font-body);
+}
+.input:focus { outline: 2px solid var(--color-mustard); }
+
+.pillRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.colorRow { display: flex; gap: 10px; }
+.colorDot {
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  cursor: pointer;
+  border: 3px solid transparent;
+  transition: border 0.12s ease, transform 0.1s ease;
+}
+.colorDot:hover { transform: scale(1.06); }
+.colorActive { border-color: var(--color-ink); }
+
+.partsList { display: flex; flex-direction: column; gap: 12px; }
+
+.partRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1px solid var(--color-rule);
+  border-radius: 16px;
+  background: var(--color-card);
+  cursor: pointer;
+  transition: border-color 0.12s ease, background 0.12s ease;
+}
+.partRow:hover { border-color: var(--color-inkMute); background: var(--color-cream2); }
+
+.partGrip { color: var(--color-inkMute); cursor: grab; }
+.partGrip:active { cursor: grabbing; }
+
+.partDot {
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  flex-shrink: 0;
+  border: 3px solid transparent;
+  transition: box-shadow 0.12s ease;
+}
+
+.partTile {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-display);
+  font-size: 16px;
+  color: #FBF6EC;
+  flex-shrink: 0;
+}
+
+.partBody {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.partTitle {
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 16px;
+  color: var(--color-ink);
+}
+
+.partMeta {
+  color: var(--color-inkMute);
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+/* ─── Step 1: required name state, character meter ──────────── */
+.nameWrap {
+  background: var(--color-card);
+  border: 2px solid var(--color-brick);
+  border-radius: 18px;
+  padding: 20px 18px;
+  position: relative;
+  transition: box-shadow 0.2s ease, background 0.2s ease;
+}
+
+.nameWrapValid {
+  /* Subtle inset shadow when name is filled — same as design. */
+  box-shadow: 0 0 0 4px rgba(156, 61, 46, 0.04);
+}
+
+.nameWrapError {
+  background: #FBEFEA;
+  border-width: 2.5px;
+  box-shadow: 0 0 0 4px rgba(156, 61, 46, 0.12);
+}
+
+:global([data-theme='dark']) .nameWrapError {
+  background: rgba(255, 122, 77, 0.07);
+  box-shadow: 0 0 0 4px rgba(255, 122, 77, 0.18);
+}
+
+.nameBang {
+  position: absolute;
+  top: 18px;
+  right: 16px;
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  background: var(--color-brick);
+  color: #FBF6EC;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-display);
+  font-size: 17px;
+  line-height: 1;
+  box-shadow: 0 2px 6px rgba(156, 61, 46, 0.35);
+}
+
+.meterRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.meterTrack {
+  flex: 1;
+  height: 4px;
+  background: var(--color-cream2);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.meterFill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.2s ease, background 0.2s ease;
+}
+
+.meterCount {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  min-width: 60px;
+  text-align: right;
+}
+
+.meterMsg {
+  margin-top: 6px;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.4px;
+  line-height: 1.4;
+}
+
+/* ─── Step 1: needle/hook card ───────────────────────────────── */
+.needleCard {
+  background: var(--color-card);
+  border: 1px solid var(--color-rule);
+  border-radius: 16px;
+  padding: 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.needleIconBox {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: var(--color-cream2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-brick);
+  flex-shrink: 0;
+}
+
+.needleBody {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.needleValue {
+  font-family: var(--font-display);
+  font-size: 24px;
+  color: var(--color-ink);
+  line-height: 1;
+}
+
+.needleHint {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--color-inkMute);
+  letter-spacing: 0.4px;
+}
+
+.needleStepper {
+  display: flex;
+  gap: 4px;
+  background: var(--color-bg);
+  border-radius: 10px;
+  padding: 4px 6px;
+}
+
+.needleStepBtn {
+  background: transparent;
+  border: 0;
+  color: var(--color-ink);
+  font-family: var(--font-display);
+  font-size: 20px;
+  padding: 0 10px;
+  cursor: pointer;
+  transition: background 0.1s ease;
+}
+.needleStepBtn:hover:not(:disabled) { background: var(--color-cream2); }
+.needleStepBtn:disabled { color: var(--color-inkMute); cursor: not-allowed; }
+
+/* ─── Step 1: dashed "add color" tile ────────────────────────── */
+.colorDotAdd {
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  border: 1.5px dashed var(--color-rule);
+  background: transparent;
+  color: var(--color-brick);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: border-color 0.12s ease;
+}
+.colorDotAdd:hover { border-color: var(--color-brick); }
+
+/* ─── Step 2: empty state hero ───────────────────────────────── */
+.partsEmpty {
+  background: var(--color-cream2);
+  border: 1.5px dashed var(--color-rule);
+  border-radius: 20px;
+  padding: 22px 20px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  text-align: center;
+}
+
+.partsEmptyMotif {
+  display: flex;
+  gap: 8px;
+  align-items: flex-end;
+  padding: 4px 0 6px;
+}
+
+.motifTileFull, .motifTileDashed {
+  width: 28px;
+  height: 36px;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.motifTileFull {
+  background: var(--color-brick);
+  box-shadow: 0 4px 10px -4px var(--color-brick);
+}
+
+.motifTileDashed {
+  background: transparent;
+  border: 1.5px dashed var(--color-rule);
+  color: var(--color-inkMute);
+}
+
+.motifTileFade { opacity: 0.55; }
+
+.partsEmptyTitle {
+  font-family: var(--font-display);
+  font-size: 24px;
+  color: var(--color-brick);
+  letter-spacing: -0.3px;
+  line-height: 1.05;
+  margin: 0;
+}
+
+.partsEmptyBody {
+  font-family: var(--font-body);
+  font-size: 13.5px;
+  color: var(--color-inkSoft);
+  line-height: 1.5;
+  max-width: 300px;
+  margin: 0;
+}
+
+.partsEmptyCta {
+  margin-top: 4px;
+  background: transparent;
+  border: 1.5px dashed var(--color-brick);
+  color: var(--color-brick);
+  padding: 12px 18px;
+  border-radius: 14px;
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.partsEmptyCta:hover { background: #FBEFEA; }
+
+.partsEmptyNote {
+  margin-top: 6px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--color-inkMute);
+  letter-spacing: 1.7px;
+  text-transform: uppercase;
+}
+
+/* ─── Step 2: part sheet ─────────────────────────────────────── */
+.sheetHeader {
+  padding: 6px 22px 14px;
+}
+
+.sheetEyebrow {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--color-mustardDk);
+}
+
+.sheetTitle {
+  font-family: var(--font-display);
+  font-size: 26px;
+  color: var(--color-brick);
+  letter-spacing: -0.3px;
+  line-height: 1.05;
+  margin: 4px 0 0;
+}
+
+.sheetIdentity {
+  display: flex;
+  gap: 12px;
+  align-items: stretch;
+}
+
+.sheetPreview {
+  width: 64px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.sheetPreviewTile {
+  width: 56px;
+  height: 64px;
+  border-radius: 14px;
+  color: #FBF6EC;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-display);
+  font-size: 28px;
+}
+
+.sheetPreviewLabel {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--color-inkMute);
+}
+
+.sheetFieldLabel {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 1.7px;
+  text-transform: uppercase;
+  color: var(--color-inkMute);
+  margin-bottom: 6px;
+}
+
+.sheetNameInput {
+  width: 100%;
+  background: var(--color-card);
+  border: 2px solid var(--color-brick);
+  border-radius: 14px;
+  padding: 12px 14px;
+  font-family: var(--font-display);
+  font-size: 22px;
+  color: var(--color-ink);
+  outline: none;
+  letter-spacing: -0.05px;
+}
+
+.sheetColorRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.sheetDanger {
+  margin-top: 22px;
+  padding-top: 18px;
+  border-top: 1px dashed var(--color-rule);
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+}
+
+.sheetRemoveBtn {
+  width: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: transparent;
+  border: 1.5px solid var(--color-brick);
+  color: var(--color-brick);
+  border-radius: 14px;
+  padding: 12px 14px;
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+}
+.sheetRemoveBtn:hover { background: #FBEFEA; }
+
+.sheetRemoveNote {
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--color-inkMute);
+  letter-spacing: 0.4px;
+}
+
+.seqRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--color-rule);
+  border-radius: 14px;
+  background: var(--color-card);
+}
+.seqName { flex: 1; font-weight: 600; }
+.seqMeta { color: var(--color-inkSoft); font-size: 13px; }
+.numCtrl { display: inline-flex; align-items: center; gap: 6px; }
+.numBtn {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: var(--color-cream2);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 14px;
+  border: 0;
+}
+
+.foot {
+  position: sticky;
+  bottom: 0;
+  background: var(--color-bgAlt);
+  border-top: 1px solid var(--color-rule);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 16px 40px;
+}
+
+/* ─── Footer progress pips ───────────────────────────────────── */
+.pips {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 24px;
+  max-width: 280px;
+}
+
+.pip {
+  flex: 1;
+  height: 6px;
+  border-radius: 4px;
+  background: var(--color-cream2);
+  transition: background 0.18s ease;
+}
+.pipDone { background: var(--color-brick); }
+.pipCurrent { background: var(--color-mustard); }
+
+/* ─── Footer blocked-state Next button ───────────────────────── */
+.nextBlocked {
+  height: 48px;
+  padding: 0 28px;
+  border-radius: 14px;
+  background: #E8D6CF;
+  border: 1.5px dashed var(--color-brick);
+  color: var(--color-brick);
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 15px;
+  cursor: not-allowed;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  letter-spacing: -0.05px;
+}
+
+:global([data-theme='dark']) .nextBlocked {
+  background: rgba(255, 122, 77, 0.18);
+}
+
+.nextBlockedBang {
+  display: inline-flex;
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  background: var(--color-brick);
+  color: #FBF6EC;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-display);
+  font-size: 12px;
+  line-height: 1;
+}
+
+/* ─── Step 4: arrange part ───────────────────────────────────── */
+.arrangePart {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.arrangePartHead {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.arrangePartDot {
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  flex-shrink: 0;
+}
+
+.arrangePartName {
+  font-family: var(--font-display);
+  font-size: 20px;
+  color: var(--color-ink);
+  letter-spacing: -0.2px;
+}
+
+.arrangePartSub {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--color-inkMute);
+  letter-spacing: 1.4px;
+  text-transform: uppercase;
+}
+
+.arrangeSeqRow {
+  background: var(--color-card);
+  border: 1px solid var(--color-rule);
+  border-radius: 16px;
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.arrangeSeqIdx {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  background: var(--color-brick);
+  color: #FBF6EC;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-display);
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.arrangeSeqBody {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.arrangeSeqName {
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 14.5px;
+  color: var(--color-ink);
+}
+
+.arrangeSeqMeta {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--color-inkMute);
+}
+
+.repeatStepper {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--color-cream2);
+  padding: 4px 8px;
+  border-radius: 10px;
+  color: var(--color-mustardDk);
+}
+
+.repeatStepperLabel {
+  font-family: var(--font-body);
+  font-size: 12px;
+  color: var(--color-inkSoft);
+  margin-right: 4px;
+}
+
+.repeatStepperBtn {
+  background: var(--color-bg);
+  border: 0;
+  width: 24px;
+  height: 24px;
+  border-radius: 7px;
+  cursor: pointer;
+  font-family: var(--font-display);
+  font-size: 16px;
+  color: var(--color-ink);
+}
+.repeatStepperBtn:hover { background: var(--color-card); }
+
+.repeatStepperValue {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--color-ink);
+  min-width: 22px;
+  text-align: center;
+}
+
+/* ─── Loop toggle row ────────────────────────────────────────── */
+.loopRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--color-card);
+  border: 1px solid var(--color-rule);
+  border-radius: 16px;
+  padding: 14px;
+  cursor: pointer;
+  margin-top: 6px;
+}
+
+.loopIcon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: var(--color-cream2);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-brick);
+  flex-shrink: 0;
+}
+
+.loopBody {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.loopTitle {
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 14.5px;
+  color: var(--color-ink);
+}
+
+.loopSub {
+  font-size: 12px;
+  color: var(--color-inkMute);
+  font-family: var(--font-body);
+}
+
+.toggle {
+  position: relative;
+  width: 46px;
+  height: 28px;
+  border-radius: 14px;
+  background: var(--color-cream2);
+  flex-shrink: 0;
+  transition: background 0.18s ease;
+}
+.toggleOn { background: var(--color-forest); }
+
+.toggleInput {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.toggleKnob {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  background: #FBF6EC;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+  transition: left 0.18s ease;
+}
+.toggleOn .toggleKnob { left: 20px; }
+
+/* ─── Summary tally banner ───────────────────────────────────── */
+.tally {
+  margin-top: 14px;
+  padding: 16px 18px;
+  border-radius: 18px;
+  background: linear-gradient(180deg, var(--color-brick) 0%, var(--color-brickDk) 100%);
+  color: #FBF6EC;
+  box-shadow: 0 10px 24px -10px var(--color-brick);
+}
+
+.tallyEyebrow {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  opacity: 0.78;
+}
+
+.tallyMain {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.tallyNumber {
+  font-family: var(--font-display);
+  font-size: 40px;
+  line-height: 1;
+}
+
+.tallyLabel {
+  font-size: 13px;
+  opacity: 0.9;
+}
+
+.tallyBreakdown {
+  display: block;
+  margin-top: 6px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  opacity: 0.85;
+}

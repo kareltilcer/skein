@@ -1,0 +1,21 @@
+.btn {
+  width: 42px;
+  height: 42px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background 0.12s ease, transform 0.08s ease;
+}
+
+.soft  { background: var(--color-cream2); color: var(--color-ink); }
+.soft:hover  { background: var(--color-bgAlt); }
+.plain { background: transparent; color: var(--color-ink); }
+.plain:hover { background: var(--color-cream2); }
+.brick { background: var(--color-brick); color: var(--color-bg); }
+.brick:hover { background: var(--color-brickDk); }
+
+.sm { width: 34px; height: 34px; }
+.md { width: 42px; height: 42px; }
+.lg { width: 52px; height: 52px; }

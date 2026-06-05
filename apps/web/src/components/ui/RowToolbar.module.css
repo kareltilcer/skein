@@ -1,0 +1,42 @@
+.bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--color-inkMute);
+  cursor: pointer;
+  transition: background 0.12s ease, color 0.12s ease, border-color 0.12s ease;
+}
+
+.btn:hover {
+  background: var(--color-cream2);
+  color: var(--color-ink);
+}
+
+.btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+/* The "this row carries a repeat" highlight on the repeat button. */
+.repeatActive {
+  background: #FBEFEA;
+  border-color: rgba(156, 61, 46, 0.24);
+  color: var(--color-brick);
+}
+
+:global([data-theme='dark']) .repeatActive {
+  background: rgba(255, 122, 77, 0.16);
+  border-color: rgba(255, 122, 77, 0.34);
+}

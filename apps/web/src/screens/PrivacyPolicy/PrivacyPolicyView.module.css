@@ -1,0 +1,127 @@
+.wrap {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-bg);
+}
+
+.topBar {
+  display: flex;
+  align-items: center;
+  padding: 18px 28px;
+  border-bottom: 1px solid var(--color-rule);
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  text-decoration: none;
+  color: var(--color-ink);
+}
+
+.brandWord {
+  font-family: var(--font-display);
+  font-size: 24px;
+  letter-spacing: -0.4px;
+  color: var(--color-brick);
+}
+
+.article {
+  flex: 1;
+  width: 100%;
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 48px 28px 64px;
+}
+
+.eyebrow {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 2.5px;
+  text-transform: uppercase;
+  color: var(--color-mustardDk);
+  margin: 0 0 12px;
+}
+
+.title {
+  font-family: var(--font-display);
+  font-size: 56px;
+  line-height: 1.0;
+  letter-spacing: -1.2px;
+  color: var(--color-brick);
+  margin: 0;
+}
+
+.updated {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 1.6px;
+  text-transform: uppercase;
+  color: var(--color-inkMute);
+  margin: 14px 0 0;
+}
+
+.section {
+  margin-top: 36px;
+  padding-top: 28px;
+  border-top: 1px solid var(--color-rule);
+}
+
+.section:first-of-type {
+  border-top: 0;
+  padding-top: 8px;
+}
+
+.h2 {
+  font-family: var(--font-display);
+  font-size: 24px;
+  letter-spacing: -0.3px;
+  color: var(--color-ink);
+  margin: 0 0 14px;
+}
+
+.p {
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.65;
+  color: var(--color-inkSoft);
+  margin: 0 0 12px;
+}
+
+.p:last-child { margin-bottom: 0; }
+
+.link {
+  color: var(--color-brick);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+.link:hover { color: var(--color-brickDk); }
+
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 20px 12px 28px;
+  border-top: 1px solid var(--color-rule);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 1.4px;
+  text-transform: uppercase;
+  color: var(--color-inkMute);
+}
+
+.footerLink {
+  color: var(--color-brick);
+  text-decoration: none;
+  transition: color 0.12s ease;
+}
+.footerLink:hover {
+  color: var(--color-brickDk);
+  text-decoration: underline;
+}
+
+.footerDot { opacity: 0.5; }
+.footerCopy { opacity: 0.85; }

@@ -1,0 +1,17 @@
+.swatch {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  background: var(--color-bg);
+  border-radius: 14px;
+  overflow: hidden;
+  border: 1.5px solid var(--color-rule);
+}
+
+.cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-card);
+  color: var(--color-ink);
+}

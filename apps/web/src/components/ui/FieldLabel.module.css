@@ -1,0 +1,11 @@
+.label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-inkSoft);
+  margin-bottom: 6px;
+}
+.hint { font-weight: 400; color: var(--color-inkMute); }
+.required { color: var(--color-brick); }

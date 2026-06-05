@@ -1,0 +1,21 @@
+.tile {
+  width: 30px;
+  height: 40px;
+  border-radius: 8px;
+  background: var(--color-bg);
+  border: 1.5px solid var(--color-rule);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-ink);
+  flex-shrink: 0;
+}
+
+.active {
+  background: var(--color-mustard);
+  border-color: var(--color-mustardDk);
+}
+
+.dim { opacity: 0.4; }
+
+.big { width: 78px; height: 96px; border-radius: 18px; }

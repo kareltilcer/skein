@@ -1,0 +1,87 @@
+.wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  padding-bottom: 60px;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  flex-wrap: wrap;
+}
+
+.filters { display: flex; gap: 10px; flex-wrap: wrap; }
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 16px;
+}
+
+.card { display: flex; gap: 14px; align-items: flex-start; }
+.cardBody { flex: 1; }
+.cardName {
+  font-family: var(--font-display);
+  font-size: 18px;
+  color: var(--color-ink);
+  margin: 0 0 4px;
+}
+.cardMeta {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--color-inkMute);
+}
+
+.rowGlyphs { display: flex; gap: 4px; margin-top: 8px; }
+
+.empty {
+  text-align: center;
+  padding: 60px 24px;
+  color: var(--color-inkSoft);
+}
+
+.menuWrap {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.menuBtn {
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  background: transparent;
+  border: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-inkMute);
+  cursor: pointer;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+.menuBtn:hover { background: var(--color-cream2); color: var(--color-ink); }
+.menuBtnOpen { background: var(--color-cream2); color: var(--color-ink); }
+
+.rowGlyphs { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; }
+
+.rowGlyphCell {
+  width: 22px;
+  height: 28px;
+  border-radius: 6px;
+  background: var(--color-bg);
+  border: 1px solid var(--color-rule);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.deleteBody {
+  color: var(--color-inkSoft);
+  text-align: center;
+  line-height: 1.5;
+  margin: 14px 0 0;
+}

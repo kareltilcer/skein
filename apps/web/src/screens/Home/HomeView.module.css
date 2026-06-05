@@ -1,0 +1,242 @@
+.wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding-bottom: 60px;
+}
+
+/* ─── Hero "Cast on a project" banner ────────────────────────── */
+.featured {
+  background: linear-gradient(110deg, var(--color-brick) 0%, var(--color-brickDk) 100%);
+  color: #FBF6EC;
+  border-radius: 24px;
+  padding: 24px 28px;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  cursor: pointer;
+  border: 0;
+  box-shadow: 0 18px 40px -18px var(--color-brick);
+  text-align: left;
+  width: 100%;
+  font-family: var(--font-body);
+  transition: transform 0.12s ease;
+}
+.featured:hover { transform: translateY(-2px); }
+.featured:active { transform: translateY(0); }
+
+.featuredIcon {
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.16);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.featuredBody { flex: 1; }
+
+.featuredTitle {
+  font-family: var(--font-display);
+  font-size: 28px;
+  line-height: 1.02;
+  letter-spacing: -0.3px;
+}
+
+.featuredSub {
+  font-size: 14px;
+  opacity: 0.86;
+  margin-top: 6px;
+  max-width: 56ch;
+  line-height: 1.4;
+}
+
+/* ─── Sections ───────────────────────────────────────────────── */
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.sectionHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.eyebrow {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--color-inkMute);
+  letter-spacing: 2.5px;
+  text-transform: uppercase;
+}
+
+.eyebrowRight {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--color-inkMute);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+  gap: 18px;
+}
+
+/* ─── Project tile ───────────────────────────────────────────── */
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.cardHeader {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.cardHeaderText {
+  flex: 1;
+  min-width: 0;
+}
+
+.cardNameRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.cardName {
+  font-family: var(--font-display);
+  font-size: 22px;
+  color: var(--color-ink);
+  margin: 0;
+  letter-spacing: -0.3px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+  line-height: 1.05;
+}
+
+.doneTag {
+  flex-shrink: 0;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--color-forest);
+  border: 1px solid var(--color-forest);
+  padding: 2px 7px;
+  border-radius: 7px;
+  letter-spacing: 1.2px;
+}
+
+.cardMeta {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--color-inkMute);
+  margin-top: 3px;
+}
+
+.partsRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.partsCount {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--color-inkMute);
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  margin-right: 2px;
+}
+
+.partChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--color-cream2);
+  border-radius: 8px;
+  padding: 4px 9px;
+  font-family: var(--font-body);
+  font-size: 12px;
+  color: var(--color-inkSoft);
+  white-space: nowrap;
+}
+
+.partDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  flex-shrink: 0;
+}
+
+/* ─── Empty state ────────────────────────────────────────────── */
+.emptyCard {
+  text-align: center;
+  padding: 32px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.emptyTitle {
+  font-family: var(--font-display);
+  font-size: 26px;
+  color: var(--color-brick);
+  margin: 0;
+}
+
+.emptySub {
+  color: var(--color-inkSoft);
+  margin: 0 0 8px;
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+/* ─── Finished collapsible ───────────────────────────────────── */
+.finishedToggle {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--color-card);
+  border: 1px solid var(--color-rule);
+  border-radius: 16px;
+  padding: 14px 18px;
+  width: 100%;
+  cursor: pointer;
+  font-family: var(--font-body);
+  color: var(--color-ink);
+  transition: background 0.12s ease;
+}
+.finishedToggle:hover { background: var(--color-cream2); }
+
+.finishedIcon {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: var(--color-cream2);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-forest);
+}
+
+.finishedLabel {
+  flex: 1;
+  text-align: left;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 2.2px;
+  text-transform: uppercase;
+  color: var(--color-inkSoft);
+}

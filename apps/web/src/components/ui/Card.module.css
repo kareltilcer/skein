@@ -1,0 +1,30 @@
+.card {
+  background: var(--color-card);
+  border-radius: 20px;
+  border: 1px solid var(--color-rule);
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+  display: block;
+  text-align: inherit;
+  font: inherit;
+  color: inherit;
+}
+
+.padSm { padding: 12px; }
+.padMd { padding: 18px; }
+.padLg { padding: 24px; }
+
+.hover:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 16px 28px rgba(43, 24, 16, 0.10);
+  border-color: var(--color-mustard);
+}
+
+.active {
+  border-color: var(--color-mustard);
+  box-shadow: 0 16px 28px rgba(43, 24, 16, 0.08);
+}
+
+.button {
+  width: 100%;
+  cursor: pointer;
+}

@@ -1,0 +1,12 @@
+.tip {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  background: var(--color-cream2);
+  border-radius: 14px;
+  color: var(--color-inkSoft);
+  font-size: 13px;
+  line-height: 1.45;
+}
+.icon { color: var(--color-mustardDk); }

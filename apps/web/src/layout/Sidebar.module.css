@@ -1,0 +1,174 @@
+.aside {
+  background: linear-gradient(180deg, var(--color-brick) 0%, var(--color-brickDk) 100%);
+  color: var(--color-bg);
+  display: flex;
+  flex-direction: column;
+  padding: 22px 14px;
+  gap: 20px;
+  flex-shrink: 0;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+  transition: width 0.2s ease;
+  width: 248px;
+}
+
+/* Dark mode swaps the brick gradient for a deep card-color rail. The
+   ThemeProvider sets data-theme on <html>; we read it here. */
+:global([data-theme='dark']) .aside {
+  background: linear-gradient(180deg, var(--color-bgAlt) 0%, var(--color-card) 100%);
+  color: var(--color-ink);
+}
+
+.collapsed { width: 76px; align-items: center; padding: 22px 8px; }
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 8px;
+  font-family: var(--font-display);
+  font-size: 22px;
+  letter-spacing: 0.4px;
+}
+
+.collapsed .brand { font-size: 0; gap: 0; }
+.collapsed .brand .word { display: none; }
+
+.cta {
+  background: var(--color-mustard);
+  color: var(--color-ink);
+  height: 46px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background 0.12s ease;
+}
+.cta:hover { background: var(--color-mustardDk); }
+
+.collapsed .cta { width: 46px; padding: 0; }
+.collapsed .cta span { display: none; }
+
+.nav {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 8px;
+}
+
+.navItem {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 42px;
+  border-radius: 12px;
+  padding: 0 12px;
+  color: rgba(255, 255, 255, 0.78);
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+.navItem:hover { background: rgba(255, 255, 255, 0.08); color: var(--color-bg); }
+
+/* Dark mode rail tints + text colors */
+:global([data-theme='dark']) .navItem {
+  color: var(--color-inkSoft);
+}
+:global([data-theme='dark']) .navItem:hover {
+  background: rgba(255, 234, 200, 0.05);
+  color: var(--color-ink);
+}
+
+.active {
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--color-bg);
+  font-weight: 700;
+}
+
+/* Mustard rail pill to the left of the active item — matches design's
+   4×22px indicator at left: -10px. */
+.active::before {
+  content: '';
+  position: absolute;
+  left: -10px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 4px;
+  height: 22px;
+  border-radius: 3px;
+  background: var(--color-mustard);
+}
+
+:global([data-theme='dark']) .active {
+  background: rgba(255, 122, 77, 0.13);
+  color: var(--color-brick);
+}
+:global([data-theme='dark']) .active::before {
+  background: var(--color-brick);
+}
+.collapsed .navItem { justify-content: center; padding: 0; width: 46px; }
+.collapsed .navLabel { display: none; }
+
+.spacer { flex: 1; }
+
+.toggle {
+  display: flex;
+  gap: 6px;
+  background: rgba(0, 0, 0, 0.18);
+  padding: 4px;
+  border-radius: 999px;
+  align-self: stretch;
+}
+.toggleBtn {
+  flex: 1;
+  height: 32px;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255, 255, 255, 0.7);
+  cursor: pointer;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+.toggleBtn:hover { color: var(--color-bg); }
+.toggleActive { background: rgba(255, 255, 255, 0.18); color: var(--color-bg); }
+
+.collapsed .toggle { flex-direction: column; align-self: center; }
+
+.account {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.16);
+  font-size: 13px;
+}
+
+.avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  background: var(--color-mustard);
+  color: var(--color-ink);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 13px;
+}
+
+.accountMeta { display: flex; flex-direction: column; gap: 2px; }
+.accountName { font-weight: 600; color: var(--color-bg); }
+.accountSync { font-size: 11px; color: rgba(255, 255, 255, 0.6); }
+
+.collapsed .account { padding: 6px; }
+.collapsed .accountMeta { display: none; }

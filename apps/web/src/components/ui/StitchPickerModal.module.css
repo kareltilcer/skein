@@ -1,0 +1,160 @@
+.head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 0 22px 14px;
+}
+
+.title {
+  font-family: var(--font-display);
+  font-size: 26px;
+  color: var(--color-brick);
+  letter-spacing: -0.3px;
+  margin: 0;
+}
+
+.sub {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--color-inkMute);
+  letter-spacing: 1.4px;
+  text-transform: uppercase;
+  margin-top: 4px;
+}
+
+.closeBtn {
+  background: transparent;
+  border: 0;
+  color: var(--color-inkSoft);
+  cursor: pointer;
+  padding: 4px;
+}
+
+.filters {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding: 0 22px 10px;
+}
+
+.filterChip {
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  background: var(--color-cream2);
+  color: var(--color-inkSoft);
+  border: 0;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.filterChip:hover { background: var(--color-card); color: var(--color-ink); }
+.filterChipActive {
+  background: var(--color-brick);
+  color: #FBF6EC;
+}
+
+.gridBody {
+  padding: 8px 22px 20px;
+}
+
+.group { margin-bottom: 16px; }
+
+.groupHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.groupLabel {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--color-inkMute);
+  letter-spacing: 2.5px;
+  text-transform: uppercase;
+}
+
+.groupCount {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--color-inkMute);
+}
+
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(74px, 1fr));
+  gap: 8px;
+}
+
+.tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 4px 8px;
+  border-radius: 12px;
+  background: var(--color-card);
+  border: 1px solid var(--color-rule);
+  cursor: pointer;
+  transition: background 0.12s ease, transform 0.08s ease;
+}
+.tile:hover { background: var(--color-cream2); transform: translateY(-1px); }
+
+.tileGlyph {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tileAbbr {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--color-inkSoft);
+}
+
+.defineCustom {
+  margin-top: 4px;
+  width: 100%;
+  background: transparent;
+  border: 1.5px dashed var(--color-brick);
+  color: var(--color-brick);
+  padding: 12px;
+  border-radius: 12px;
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.customRoll {
+  text-align: center;
+  padding: 20px 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.customRollTitle {
+  font-family: var(--font-display);
+  font-size: 22px;
+  color: var(--color-brick);
+  margin: 0;
+}
+
+.customRollBody {
+  max-width: 380px;
+  color: var(--color-inkSoft);
+  line-height: 1.5;
+  margin: 0;
+}

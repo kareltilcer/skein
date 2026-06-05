@@ -1,0 +1,26 @@
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 14px;
+  border-radius: 999px;
+  background: var(--color-cream2);
+  color: var(--color-inkSoft);
+  font-weight: 500;
+  font-size: 13px;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: background 0.12s ease, color 0.12s ease, border 0.12s ease;
+}
+.chip:hover { color: var(--color-ink); }
+
+.active {
+  background: var(--color-ink);
+  color: var(--color-bg);
+}
+
+.brick { background: var(--color-brick); color: var(--color-bg); }
+.brick:hover { background: var(--color-brickDk); color: var(--color-bg); }
+
+.lg { height: 36px; padding: 0 16px; font-size: 14px; }

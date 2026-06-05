@@ -1,0 +1,271 @@
+/* Shared chrome for NewRow, NewSequence, NewPattern, CustomStitch routes. */
+
+.shell {
+  display: flex;
+  flex-direction: column;
+  min-height: calc(100vh - 0px);
+  margin: 0 -40px;  /* Cancel AppLayout's container padding so this view goes edge-to-edge. */
+  background: var(--color-bgAlt);
+  position: relative;
+}
+
+.titleBlock {
+  padding: 14px 40px 8px;
+}
+
+.title {
+  font-family: var(--font-display);
+  font-size: 36px;
+  color: var(--color-brick);
+  letter-spacing: -0.5px;
+  margin: 0;
+  line-height: 1.02;
+}
+
+.sub {
+  font-family: var(--font-body);
+  font-size: 14px;
+  color: var(--color-inkSoft);
+  margin: 8px 0 0;
+  line-height: 1.45;
+  max-width: 60ch;
+}
+
+.scrollBody {
+  flex: 1;
+  padding: 8px 40px 24px;
+  max-width: 880px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+/* ─── Live preview tile ──────────────────────────────────────── */
+.previewCard {
+  background: var(--color-card);
+  border: 1.5px solid var(--color-brick);
+  border-radius: 18px;
+  padding: 14px;
+  box-shadow: 0 8px 22px -16px var(--color-brick);
+  margin-bottom: 22px;
+}
+
+.previewHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.eyebrow {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--color-inkMute);
+  letter-spacing: 2.5px;
+  text-transform: uppercase;
+}
+
+.previewBadge {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--color-ink);
+  background: var(--color-mustard);
+  padding: 3px 7px;
+  border-radius: 6px;
+  letter-spacing: 0.8px;
+}
+
+.previewName {
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 15.5px;
+  color: var(--color-ink);
+  letter-spacing: -0.05px;
+}
+
+.previewNamePlaceholder {
+  color: var(--color-inkMute);
+  font-style: italic;
+}
+
+.previewStrip {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 3px;
+  margin-top: 8px;
+}
+
+.previewMore {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--color-inkMute);
+}
+
+.previewNotation {
+  margin-top: 8px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--color-inkMute);
+}
+
+/* ─── Identity ───────────────────────────────────────────────── */
+.nameInput {
+  width: 100%;
+  background: var(--color-card);
+  border: 1.5px solid var(--color-rule);
+  border-radius: 12px;
+  padding: 14px 16px;
+  font-family: var(--font-body);
+  font-size: 16px;
+  color: var(--color-ink);
+  outline: none;
+  letter-spacing: -0.05px;
+  transition: border-color 0.12s ease;
+}
+.nameInput:focus { border-color: var(--color-brick); }
+
+.craftRow {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+/* ─── Builder ────────────────────────────────────────────────── */
+.builder {
+  background: var(--color-cream2);
+  border: 1px solid var(--color-rule);
+  border-radius: 16px;
+  padding: 14px;
+}
+
+.tilesRow {
+  display: flex;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 4px;
+  row-gap: 20px;
+  padding-top: 14px;
+}
+
+.caretSlot {
+  width: 30px;
+  height: 40px;
+  border-radius: 7px;
+  border: 1.5px dashed var(--color-brick);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.85;
+}
+
+.caret {
+  width: 2px;
+  height: 20px;
+  background: var(--color-brick);
+  animation: yl-caret-blink 1.1s steps(1) infinite;
+}
+
+@keyframes yl-caret-blink {
+  0%, 60% { opacity: 1; }
+  61%, 100% { opacity: 0; }
+}
+
+.toolbarRow {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 12px;
+}
+
+/* ─── Marking banner / hint ──────────────────────────────────── */
+.markBanner {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  background: #FBEFEA;
+  border: 1px solid rgba(156, 61, 46, 0.2);
+  border-radius: 11px;
+  padding: 8px 11px;
+  margin-bottom: 16px;
+}
+
+:global([data-theme='dark']) .markBanner {
+  background: rgba(255, 122, 77, 0.1);
+  border-color: rgba(255, 122, 77, 0.3);
+}
+
+.markStep {
+  width: 22px;
+  height: 22px;
+  border-radius: 11px;
+  background: var(--color-brick);
+  color: #FBF6EC;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-display);
+  font-size: 13px;
+  flex-shrink: 0;
+}
+
+.markText {
+  flex: 1;
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--color-ink);
+  letter-spacing: -0.05px;
+}
+
+.markCancel {
+  background: transparent;
+  border: 1px solid var(--color-rule);
+  color: var(--color-inkSoft);
+  border-radius: 9px;
+  padding: 6px 12px;
+  cursor: pointer;
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 12.5px;
+}
+
+.markHint {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--color-inkMute);
+  margin: 12px 0 0;
+  line-height: 1.45;
+}
+
+/* ─── Notation read-out ──────────────────────────────────────── */
+.notationCard {
+  background: var(--color-card);
+  border: 1px solid var(--color-rule);
+  border-radius: 12px;
+  padding: 12px 14px;
+}
+
+.notationText {
+  font-family: var(--font-mono);
+  font-size: 13.5px;
+  color: var(--color-ink);
+  letter-spacing: 0.1px;
+}
+
+.notationFoot {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--color-inkMute);
+  margin: 6px 0 22px;
+  letter-spacing: 0.4px;
+}
+
+.signoff {
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--color-inkMute);
+  letter-spacing: 2.5px;
+  text-transform: uppercase;
+  margin: 6px 0 24px;
+}

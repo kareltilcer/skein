@@ -1,0 +1,86 @@
+.wrap {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.button {
+  background: transparent;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  display: inline-block;
+}
+
+.tile {
+  border-radius: 7px;
+  background: var(--color-cream2);
+  border-width: 1.2px;
+  border-style: solid;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2px;
+  transition: opacity 140ms ease, box-shadow 140ms ease, border-color 140ms ease;
+}
+
+.inRepeat {
+  background: rgba(156, 61, 46, 0.09);
+  border-width: 1.5px;
+}
+
+:global([data-theme='dark']) .inRepeat {
+  background: rgba(255, 122, 77, 0.16);
+}
+
+.anchor {
+  border-width: 2px;
+}
+
+.dim {
+  opacity: 0.34;
+}
+
+.tap {
+  box-shadow: 0 0 0 3px rgba(212, 146, 59, 0.22);
+}
+
+:global([data-theme='dark']) .tap {
+  box-shadow: 0 0 0 3px rgba(255, 194, 95, 0.22);
+}
+
+.tappable:hover {
+  filter: brightness(1.05);
+}
+
+.abbr {
+  font-family: var(--font-mono);
+  font-size: 8px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.2px;
+  margin-top: 1px;
+  text-align: center;
+  align-self: stretch;
+  padding: 0 2px;
+  overflow: hidden;
+  text-overflow: clip;
+}
+
+.anchorBadge {
+  position: absolute;
+  top: -15px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: var(--font-mono);
+  font-size: 7.5px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: #FBF6EC;
+  padding: 1px 5px;
+  border-radius: 5px;
+  white-space: nowrap;
+  box-shadow: 0 3px 7px -3px rgba(156, 61, 46, 0.6);
+  z-index: 2;
+  text-transform: uppercase;
+}

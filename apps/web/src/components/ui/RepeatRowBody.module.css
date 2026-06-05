@@ -1,0 +1,92 @@
+.tiles {
+  display: flex;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  row-gap: 18px;
+  column-gap: 8px;
+  padding-top: 14px;
+}
+
+.fixedGroup {
+  display: flex;
+  gap: 3px;
+}
+
+.group {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
+}
+
+.groupRow {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  background: rgba(156, 61, 46, 0.05);
+  border-radius: 9px;
+  padding: 2px 4px;
+}
+
+:global([data-theme='dark']) .groupRow {
+  background: rgba(255, 122, 77, 0.07);
+}
+
+.groupTiles {
+  display: flex;
+  gap: 3px;
+}
+
+.bracket {
+  width: 8px;
+  height: 44px;
+  flex-shrink: 0;
+  border-top: 2.5px solid var(--color-brick);
+  border-bottom: 2.5px solid var(--color-brick);
+}
+
+.bracketOpen {
+  border-left: 2.5px solid var(--color-brick);
+  border-top-left-radius: 5px;
+  border-bottom-left-radius: 5px;
+}
+
+.bracketClose {
+  border-right: 2.5px solid var(--color-brick);
+  border-top-right-radius: 5px;
+  border-bottom-right-radius: 5px;
+}
+
+.ruleBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 9px;
+  border-radius: 999px;
+  background: #FBEFEA;
+  border: 1px solid rgba(156, 61, 46, 0.2);
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+}
+
+:global([data-theme='dark']) .ruleBadge {
+  background: rgba(255, 122, 77, 0.16);
+  border-color: rgba(255, 122, 77, 0.3);
+}
+
+.sep {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--color-rule);
+}
+
+.notation {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--color-inkSoft);
+  line-height: 1.45;
+  letter-spacing: -0.1px;
+}

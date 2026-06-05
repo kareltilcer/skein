@@ -1,0 +1,39 @@
+.wrap {
+  display: inline-flex;
+  background: var(--color-cream2);
+  border-radius: 999px;
+  padding: 4px;
+  gap: 4px;
+}
+
+.item {
+  height: 36px;
+  padding: 0 16px;
+  border-radius: 999px;
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--color-inkSoft);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+.item:hover { color: var(--color-ink); }
+
+.active {
+  background: var(--color-card);
+  color: var(--color-ink);
+  box-shadow: 0 2px 8px rgba(43, 24, 16, 0.08);
+}
+
+.count {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-inkMute);
+  background: var(--color-bg);
+  padding: 1px 7px;
+  border-radius: 999px;
+}
+
+.lg .item { height: 44px; font-size: 14px; padding: 0 20px; }
