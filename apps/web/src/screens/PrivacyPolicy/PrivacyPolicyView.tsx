@@ -3,7 +3,7 @@ import SkeinLogo from '../../components/ui/SkeinLogo'
 import s from './PrivacyPolicyView.module.css'
 
 const LAST_UPDATED = 'June 5, 2026'
-const CONTACT_EMAIL = 'email@email.com'
+const CONTACT_EMAIL = 'yarnlogapp@gmail.com'
 
 export default function PrivacyPolicyView() {
   return (

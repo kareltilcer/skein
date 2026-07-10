@@ -1,0 +1,30 @@
+services:
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    image: skein-web
+    ports:
+      - "1001:80"
+    restart: unless-stopped
+    # Uncomment once the backend service below is enabled.
+    # depends_on:
+    #   - backend
+
+  # --- Backend (not operational yet) ---
+  # The Go backend does not have a Dockerfile/runtime setup yet, so this service
+  # is disabled for now. To bring it online later:
+  #   1. Add backend/Dockerfile (build & run ./cmd/api, listening on $PORT).
+  #   2. Uncomment this service and the `depends_on` block above.
+  #   3. Enable the /api/ proxy block in apps/web/nginx.conf.
+  #
+  # backend:
+  #   build:
+  #     context: .
+  #     dockerfile: backend/Dockerfile
+  #   image: skein-backend
+  #   environment:
+  #     PORT: "8080"
+  #   ports:
+  #     - "8080:8080"
+  #   restart: unless-stopped

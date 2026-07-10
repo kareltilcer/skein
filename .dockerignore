@@ -1,0 +1,26 @@
+# Dependencies (reinstalled inside the image)
+**/node_modules
+
+# Build outputs
+**/dist
+**/build
+**/.expo
+**/*.tsbuildinfo
+
+# VCS & tooling
+.git
+.gitignore
+.idea
+.vscode
+
+# OS junk
+**/.DS_Store
+
+# Env files (pass secrets via compose env, not baked into the image)
+.env
+.env.local
+.env.*.local
+
+# Docker files themselves
+**/Dockerfile
+docker-compose.yml
