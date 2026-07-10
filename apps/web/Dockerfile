@@ -13,8 +13,11 @@ COPY packages/shared/package.json ./packages/shared/package.json
 
 # Install only the web app and the shared package it depends on. This skips the
 # heavy mobile/Expo toolchain. If your npm version does not support scoped `ci`,
-# replace the line below with a plain `RUN npm ci`.
-RUN npm ci --workspace=apps/web --workspace=packages/shared --include-workspace-root
+# replace the workspace flags below with a plain `RUN npm ci --include=dev`.
+# `--include=dev` forces devDependencies (typescript, vite, ...) to install even
+# when the build host sets NODE_ENV=production (e.g. Coolify), since the build
+# toolchain lives in devDependencies.
+RUN npm ci --include=dev --workspace=apps/web --workspace=packages/shared --include-workspace-root
 
 # Copy the sources required to build the web app.
 COPY tsconfig.json ./tsconfig.json
