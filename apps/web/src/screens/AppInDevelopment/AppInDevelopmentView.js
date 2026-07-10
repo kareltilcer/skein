@@ -1,0 +1,8 @@
+import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
+import { Link } from 'react-router-dom';
+import SkeinLogo from '../../components/ui/SkeinLogo';
+import s from './AppInDevelopmentView.module.css';
+const GOOGLE_PLAY_URL = '#';
+export default function AppInDevelopmentView() {
+    return (_jsxs("div", { className: s.wrap, children: [_jsxs("section", { className: s.center, children: [_jsxs("div", { className: s.logoWrap, children: [_jsx(SkeinLogo, { size: 132 }), _jsx("span", { className: s.motifStar, "aria-hidden": true, children: "* * *" }), _jsx("span", { className: s.motifSlash, "aria-hidden": true, children: "// // //" })] }), _jsx("h1", { className: s.greeting, children: "YarnLog" }), _jsx("p", { className: s.tagline, children: "stitch happens." }), _jsx("p", { className: s.body, children: "The web version is still on the needles. We're knitting it together, row by row \u2014 check back soon." }), _jsx("p", { className: s.bodyAlt, children: "In the meantime, you can cast on with the mobile app:" }), _jsxs("a", { className: s.cta, href: GOOGLE_PLAY_URL, target: "_blank", rel: "noreferrer noopener", children: [_jsx("span", { className: s.ctaLabel, children: "Get it on" }), _jsx("span", { className: s.ctaName, children: "Google Play" })] }), _jsx("p", { className: s.note, children: "no account needed \u00B7 ever" })] }), _jsxs("footer", { className: s.footer, children: [_jsx(Link, { to: "/privacy-policy", className: s.footerLink, children: "Privacy Policy" }), _jsx("span", { className: s.footerDot, "aria-hidden": true, children: "\u00B7" }), _jsxs("span", { className: s.footerCopy, children: ["\u00A9 ", new Date().getFullYear(), " YarnLog"] })] })] }));
+}
