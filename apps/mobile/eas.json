@@ -19,6 +19,9 @@
     },
     "production": {
       "autoIncrement": false,
+      "env": {
+        "NODE_OPTIONS": "--max-old-space-size=4096"
+      },
       "android": {
         "buildType": "app-bundle"
       }
