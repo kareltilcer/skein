@@ -34,6 +34,13 @@
           "imageWidth": 200
         }
       ]
-    ]
+    ],
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "7d4b0951-7533-4f16-b3f4-4395611b0518"
+      }
+    },
+    "owner": "charlesvats-team"
   }
 }
