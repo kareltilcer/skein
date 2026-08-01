@@ -4,22 +4,34 @@ Audit of `apps/mobile/` against Google Play Store submission requirements. Revie
 
 ## Blockers (won't build, won't submit, or won't pass review)
 
-### 1. `app.json` is minimal — missing nearly every Play Store field
+### 1. `app.json` Play Store fields — RESOLVED
 
-Current state: name, slug, version, scheme, bundleId, package, two plugins. That's it. You need at least:
+`app.json` now declares every required field. Verified against the current file:
 
-- `icon` — path to a 1024×1024 PNG (no transparency, no rounded corners)
-- `android.adaptiveIcon` — `foregroundImage` + `backgroundColor` (or background image)
-- `android.versionCode` — integer, must increment on every Play upload. **Set this now**; auto-bump is opt-in via EAS.
-- `splash` (or `expo-splash-screen` plugin config) — `_layout.tsx:21` calls `SplashScreen.preventAutoHideAsync()` but no splash is configured, so users see a white flash.
-- `userInterfaceStyle: "automatic"` — dark/light/auto is supported in code but never declared; Android will lock to light without this.
-- `description` — needed by the manifest and the store listing.
-- `android.permissions` — explicitly set to `[]` if none are needed; otherwise Expo inherits a default set you didn't pick.
-- `android.edgeToEdgeEnabled: true` (Android 15 / SDK 35 default behavior). Confirm screens handle insets — `SafeAreaProvider` is wired, so likely fine, but worth a pass.
+| Field | Value | Status |
+|---|---|---|
+| `icon` | `./assets/icon.png` — **1024×1024, no alpha, RGB** (opaque, no rounded corners) | ✓ |
+| `android.adaptiveIcon` | `foregroundImage: ./assets/adaptive-icon.png` (1024×1024) + `backgroundColor: #F2EBDD` | ✓ |
+| `android.versionCode` | `1` — bump manually on every Play upload (`eas.json` uses `autoIncrement: false`) | ✓ |
+| splash | `expo-splash-screen` plugin: `image: ./assets/splash.png` (1024×1024), `backgroundColor: #F2EBDD`, `imageWidth: 200` — resolves the white-flash concern at `_layout.tsx:22` | ✓ |
+| `userInterfaceStyle` | `"automatic"` — matches the dark/light/auto logic in `_layout.tsx:27` | ✓ |
+| `description` | "Plan projects, log rows, and keep your yarn library — quietly, offline, and yours." | ✓ |
+| `android.permissions` | `[]` — no inherited defaults | ✓ |
+| `android.edgeToEdgeEnabled` | `true` — insets handled via `SafeAreaProvider` (`_layout.tsx:83`) | ✓ |
+| `orientation` | `"portrait"` | ✓ |
+| `newArchEnabled` | `true` | ✓ |
 
-### 2. No app icon / splash / adaptive icon assets exist
+Asset dimensions/alpha confirmed with `sips`: `icon.png` is opaque (Play rejects transparent launcher icons); `adaptive-icon.png` and `splash.png` carry alpha as expected. All three referenced files exist under `apps/mobile/assets/` (this also clears blocker #2 below).
 
-There is no `assets/` directory in `apps/mobile/`. The `design/` folder only contains handoff ZIPs. Actual PNGs need to be checked in (typically `apps/mobile/assets/icon.png`, `adaptive-icon.png`, `splash.png`, plus a 1024×500 feature graphic for the store listing — that one lives outside the repo).
+### 2. App icon / splash / adaptive icon assets — RESOLVED
+
+`apps/mobile/assets/` exists and is checked in with all three PNGs, each verified 1024×1024 via `sips`:
+
+- `icon.png` — 1024×1024, **no alpha**, RGB (Play-compliant opaque launcher icon).
+- `adaptive-icon.png` — 1024×1024 with alpha (adaptive foreground; paired with `backgroundColor: #F2EBDD`).
+- `splash.png` — 1024×1024 with alpha (wired via the `expo-splash-screen` plugin).
+
+All three are referenced correctly from `app.json` (see blocker #1). The one remaining image — the **1024×500 feature graphic** — is a store-listing asset that lives outside the repo and is tracked under "Play Console listing prerequisites" below.
 
 ### 3. Display name vs brand — RESOLVED
 
@@ -42,36 +54,62 @@ Manual steps still required (cannot be automated from the repo — needs the use
 2. First `eas build -p android --profile production` run: choose **"Let EAS manage credentials"** when prompted (recommended — EAS generates and stores the upload keystore).
 3. For `eas submit -p android` to work, create a Google Play service-account JSON (Play Console → Setup → API access) and either point `submit.production.android.serviceAccountKeyPath` at it or upload it once via `eas credentials`.
 
-### 5. No privacy policy URL
+### 5. Privacy policy URL — RESOLVED
 
-Play Console requires one in the Data Safety form, even though this app appears to be fully local (`AsyncStorage` only — no backend, no analytics). Host a simple page; submission is blocked without it.
+Play Console requires one in the Data Safety form, even though this app appears to be fully local (`AsyncStorage` only — no backend, no analytics). Hosted at **https://yarnlog.tilcer.cz/privacy-policy** — use this URL in the Data Safety form and the store listing.
 
 ## Things to verify before the production build
 
-### 6. The Metro/Babel "Expo Go" hacks (`metro.config.js:11-31`, `babel.config.js:7-21`)
+### 6. The Metro/Babel "Expo Go" hacks (`metro.config.js:11-31`, `babel.config.js:7-21`) — RESOLVED
 
-Both files exist to force React 19.1.0 and `react-native-worklets` 0.5.1 to match what Expo Go ships. In a **standalone production build** there is no Expo Go binary — the build uses whatever `apps/mobile/node_modules` resolves. The redirects should still work (they point at the same project node_modules) but:
+Reframing: these aren't really "Expo Go" hacks. Expo SDK 54's *canonical* versions (per `expo/bundledNativeModules.json`) are **react 19.1.0** and **react-native-worklets 0.5.1** — exactly what the mobile workspace pins. The monorepo hoists newer versions to the repo root (react **19.2.7**, pulled by `apps/web`'s `react ^19.1.0`; worklets **0.8.3**, pulled by reanimated's `0.5 - 0.8` range). The Metro `resolveRequest` redirects + the manual Babel plugin pin realign everything back to the SDK-correct versions. This alignment is required for **both** Expo Go and standalone production builds — removing it would break the release build, not just dev.
 
-- Verify `npx expo run:android --variant release` succeeds end-to-end at least once before EAS.
-- The worklets-plugin version pin is the riskiest piece — confirm reanimated animations actually run in a release build (the Expo Go pinning isn't relevant once shipping a standalone binary, but the version still needs to match between runtime and the babel plugin).
+Verified statically (authoritative) — worklets is aligned at **0.5.1** across all three layers that must agree:
 
-### 7. Run `npm run typecheck` cleanly
+| Layer | worklets | react |
+|---|---|---|
+| Native (RN autolinking → `apps/mobile/node_modules`) | **0.5.1** | n/a (RN 0.81.5 renderer pairs with 19.1.0) |
+| JS bundle (Metro `resolveRequest`) | **0.5.1** | **19.1.0** (forced) |
+| Babel worklets plugin | **0.5.1** | — |
+| Expo SDK 54 canonical | 0.5.1 | 19.1.0 |
 
-`npx tsc --noEmit` didn't produce readable output in audit context — run it manually and resolve any errors before publishing.
+The riskiest case the audit worried about — native compiled at 0.8.3 while JS runs 0.5.1 — **does not happen**. `expo-modules-autolinking react-native-config` resolves the native worklets module to `apps/mobile/node_modules/react-native-worklets@0.5.1` (node resolution starts in the workspace, where the exact `0.5.1` pin keeps a nested copy), matching the JS bundle and Babel plugin. `reanimated` resolves to root `4.1.7` (satisfies Expo's `~4.1.1` and its own `0.5 - 0.8` worklets range); single copy, no skew.
 
-### 8. Strip dev-only code
+Verified by running the production JS pipeline: `NODE_ENV=production expo export --platform android` — Metro in production mode with the `resolveRequest` redirects and the 0.5.1 Babel worklets plugin — compiled the whole app (reanimated worklets included) to a valid **5.01 MB Hermes bytecode bundle** with no errors. That's the JS half of a release build; a worklets-plugin/runtime version mismatch would have thrown during transform.
 
-`grep` for `console.*` returned nothing (good). Still worth a manual sweep for `__DEV__`-only branches and any test/seed buttons in the Settings screen — `resetSkeinData` is imported in `SettingsScreen.tsx` and that's a destructive action that should probably be gated or removed for a 1.0 release.
+Remaining manual step (couldn't run here — no JDK in this env, and it requires `expo prebuild`/Gradle): install the resulting AAB/APK on a device and tap through once to *visually* confirm reanimated animations play. The substantive risk behind that step (version mismatch) is already ruled out above.
 
-## Play Console listing prerequisites (outside the repo, but blocking submission)
+### 7. Run `npm run typecheck` cleanly — RESOLVED
 
-- **Screenshots**: minimum 2 phone screenshots (1080×1920 or similar). `ios.supportsTablet: true` is set but no Android tablet support is declared, so the listing will be phone-only — confirm that's intended.
-- **Feature graphic**: 1024×500 PNG/JPG.
-- **Short description** (80 chars) and **full description** (4000 chars) — in en/cs/de since all three are supported.
-- **Content rating questionnaire** (IARC) — quick form, but mandatory.
-- **Target audience & content** — declare adult vs. mixed-age audience.
-- **Data safety form** — declare that user data stays on device. AsyncStorage counts as "data collected" in Google's definition only if it leaves the device; since it doesn't, declare "no data collected/shared" but still fill the form.
-- **Ads declaration** — "Contains ads?" → No.
+`npm run typecheck` (`tsc --noEmit`) **passes with exit 0**, no errors, under `strict: true` (tsconfig extends `expo/tsconfig.base`).
+
+Confirmed the check is meaningful, not vacuous: `tsc --listFilesOnly` shows it covers all **69** mobile `.ts`/`.tsx` files plus the shared `packages/shared` sources. `skipLibCheck` only skips `node_modules` `.d.ts` files (standard). The `.expo/types/**/*.d.ts` entry in `include` currently matches nothing, but that's harmless — typed routes aren't enabled (the `expo-router` plugin has no options and there's no `experiments.typedRoutes`), so no generated route types are required for full coverage.
+
+### 8. Strip dev-only code — RESOLVED
+
+Full sweep of `src/` and `app/` is clean: **no** `console.*`, `__DEV__` branches, `TODO`/`FIXME`/`HACK`, `debugger`, `alert(`, or any `seed`/`mock`/`dummy`/`fixture`/`testData` identifiers. No dev-only code to strip.
+
+The one flagged item — `resetSkeinData` in `SettingsScreen.tsx` — turned out **not** to be dev/debug code. It's a complete, polished **user feature** ("reset all data / start fresh"): confirmation-gated behind a modal (brick-red destructive styling, "no undo" warning, `resetting` busy state, "Keep it" cancel), fully translated in en/de/cs, and it wipes only user data (projects, custom library, custom stitches) while restoring library seeds and **preserving** theme/language/preferences (`packages/shared/src/stores/resetStores.ts`).
+
+Its entry-point button (the `MiniRow` in the Settings "More" group) is **intentionally commented out** (`SettingsScreen.tsx:387-393`), so the whole flow — modal, `executeReset`, `resetConfirmOpen`/`resetting` state, the `resetStores` import, and the `resetData*` i18n keys — is currently unreachable dead code but does no harm (typechecks, doesn't ship a live destructive button).
+
+**Decision (1.0): leave as-is** — button stays commented out, revisit post-1.0. Nothing to remove or gate for release; the destructive action is not reachable by users.
+
+## Play Console listing prerequisites — RESOLVED (assets prepared in repo)
+
+All listing assets and pre-filled form answers now live under
+[`store-listing/`](./store-listing/) (see its `README.md` for the field-by-field upload guide).
+Images are generated from committed, reproducible source in `store-listing/build/` (headless
+Chrome + the app's own embedded fonts); rerun with `node build.mjs`.
+
+- **Screenshots** — ✓ 6 phone screenshots at 1080×1920, per language (`store-listing/screenshots/{en,cs,de}/`). These are designed marketing mockups (pixel-exact recreations of real screens using the app's real palette, fonts, and in-app copy) because this environment has no Android build toolchain for genuine captures. **Phone-only confirmed** (matches `app.json` — no Android tablet support declared; `ios.supportsTablet` doesn't affect the Play listing).
+- **Feature graphic** — ✓ 1024×500 PNG per language (`store-listing/feature-graphic/`).
+- **Short description** (≤80) and **full description** (≤4000) — ✓ in en/cs/de, all verified within limits (`store-listing/descriptions/`). Also includes a ≤30-char app title per language.
+- **Content rating questionnaire** (IARC) — ✓ recommended answers (all "No" → lowest ratings) in `store-listing/play-console-answers/content-rating-iarc.md`.
+- **Target audience & content** — ✓ recommendation (adult audience, no under-13 group → avoids Families policy) in `target-audience.md`.
+- **Data safety form** — ✓ "no data collected or shared" (app is fully on-device; no backend/analytics/SDKs) with per-toggle guidance in `data-safety.md`.
+- **Ads declaration** — ✓ "Contains ads?" → **No** (`ads-declaration.md`).
+- **Store app icon (512×512)** — export from `assets/icon.png`: `sips -z 512 512 assets/icon.png --out icon-512.png`.
 
 ## Nice-to-haves before 1.0
 
@@ -83,8 +121,8 @@ Both files exist to force React 19.1.0 and `react-native-worklets` 0.5.1 to matc
 
 The fastest path to "ready to upload":
 
-1. Decide the public name + final package id.
-2. Add icon/adaptive-icon/splash PNGs under `apps/mobile/assets/` and wire them in `app.json` along with `versionCode`, `description`, `userInterfaceStyle`, and `android.permissions: []`.
-3. `npx eas-cli init` + a minimal `eas.json` with a `production` profile producing an AAB.
+1. ✓ Public name (YarnLog) + package id (`com.yarnlog.app`) decided.
+2. ✓ Icon/adaptive-icon/splash wired in `app.json` (blockers #1–2).
+3. `npx eas-cli init` + the committed `eas.json` `production` profile producing an AAB (blocker #4 — manual EAS/Play account steps remain).
 4. Run one `eas build -p android --profile production`, install the resulting AAB on a device via `bundletool`, and smoke-test.
-5. Host a privacy policy, prep listing copy + screenshots, fill the Console forms.
+5. ✓ Privacy policy hosted (#5); ✓ listing copy, screenshots, feature graphic and Console form answers prepared in [`store-listing/`](./store-listing/) — transcribe them into the Console per its `README.md`.
