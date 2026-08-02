@@ -1,6 +1,7 @@
 import 'react-native-get-random-values'
 import '../src/storage/asyncStorageAdapter' // must come before any persisted store touches the adapter
 import '../src/i18n'
+import '../src/utils/statusReportInit' // Initialize status reporting as early as possible
 import React from 'react'
 import { Stack as _Stack } from 'expo-router'
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

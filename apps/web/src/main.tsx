@@ -1,6 +1,7 @@
 import './storage/localStorageAdapter'
 import './i18n'
 import './styles/global.css'
+import './lib/statusReportInit' // Initialize status reporting as early as possible
 
 import React from 'react'
 import ReactDOM from 'react-dom/client'

@@ -9,18 +9,34 @@
       "distribution": "internal",
       "android": {
         "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_STATUS_INGEST_URL": "https://status.tilcer.cz/api/ingest/yarnlog",
+        "EXPO_PUBLIC_STATUS_INGEST_KEY": "ik_your_mobile_ingest_key_here",
+        "EXPO_PUBLIC_STATUS_ENVIRONMENT": "dev",
+        "EXPO_PUBLIC_STATUS_RELEASE": "mobile@1.0.0-dev"
       }
     },
     "preview": {
       "distribution": "internal",
       "android": {
         "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_STATUS_INGEST_URL": "https://status.tilcer.cz/api/ingest/yarnlog",
+        "EXPO_PUBLIC_STATUS_INGEST_KEY": "ik_your_mobile_ingest_key_here",
+        "EXPO_PUBLIC_STATUS_ENVIRONMENT": "staging",
+        "EXPO_PUBLIC_STATUS_RELEASE": "mobile@1.0.0-preview"
       }
     },
     "production": {
       "autoIncrement": false,
       "env": {
-        "NODE_OPTIONS": "--max-old-space-size=4096"
+        "NODE_OPTIONS": "--max-old-space-size=4096",
+        "EXPO_PUBLIC_STATUS_INGEST_URL": "https://status.tilcer.cz/api/ingest/yarnlog",
+        "EXPO_PUBLIC_STATUS_INGEST_KEY": "ik_your_mobile_ingest_key_here",
+        "EXPO_PUBLIC_STATUS_ENVIRONMENT": "prod",
+        "EXPO_PUBLIC_STATUS_RELEASE": "mobile@1.0.0"
       },
       "android": {
         "buildType": "app-bundle"

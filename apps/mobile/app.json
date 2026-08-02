@@ -39,7 +39,11 @@
       "router": {},
       "eas": {
         "projectId": "7d4b0951-7533-4f16-b3f4-4395611b0518"
-      }
+      },
+      "statusIngestUrl": "https://status.tilcer.cz/api/ingest/yarnlog",
+      "statusIngestKey": "ik_your_mobile_ingest_key_here",
+      "statusEnvironment": "prod",
+      "statusRelease": "mobile@1.0.0"
     },
     "owner": "charlesvats-team"
   }
