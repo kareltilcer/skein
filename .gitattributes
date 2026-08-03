@@ -1,0 +1,42 @@
+* text=auto eol=lf
+
+# TypeScript
+*.ts text eol=lf
+*.tsx text eol=lf
+*.d.ts text eol=lf
+
+# JavaScript
+*.js text eol=lf
+*.jsx text eol=lf
+*.mjs text eol=lf
+*.cjs text eol=lf
+
+# JSON
+*.json text eol=lf
+
+# Config files
+*.yml text eol=lf
+*.yaml text eol=lf
+*.md text eol=lf
+*.txt text eol=lf
+
+# Lock files
+package-lock.json text eol=lf
+
+# IDE
+.vscode/* text eol=lf
+.idea/* text eol=lf
+
+# Jest
+coverage/** -text
+
+# Build outputs
+dist/** -text
+build/** -text
+*.tsbuildinfo -text
+
+# Node modules
+node_modules/** -text
+
+# OS files
+.DS_Store -text

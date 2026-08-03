@@ -23,3 +23,12 @@ backend/bin/
 *.swp
 .idea/
 .vscode/
+
+# TypeScript compiled output in src directories
+apps/web/src/**/*.js
+packages/shared/src/**/*.js
+!apps/web/src/**/*.ts
+!packages/shared/src/**/*.ts
+
+# Jest
+coverage/
