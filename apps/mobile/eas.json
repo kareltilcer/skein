@@ -11,10 +11,9 @@
         "buildType": "apk"
       },
       "env": {
-        "EXPO_PUBLIC_STATUS_INGEST_URL": "https://status.tilcer.cz/api/ingest/yarnlog",
-        "EXPO_PUBLIC_STATUS_INGEST_KEY": "ik_your_mobile_ingest_key_here",
-        "EXPO_PUBLIC_STATUS_ENVIRONMENT": "dev",
-        "EXPO_PUBLIC_STATUS_RELEASE": "mobile@1.0.0-dev"
+        "EXPO_PUBLIC_STATUS_INGEST_URL": "@EXPO_PUBLIC_STATUS_INGEST_URL",
+        "EXPO_PUBLIC_STATUS_INGEST_KEY": "@EXPO_PUBLIC_STATUS_INGEST_KEY",
+        "EXPO_PUBLIC_STATUS_ENVIRONMENT": "prod"
       }
     },
     "preview": {
