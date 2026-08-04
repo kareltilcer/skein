@@ -111,6 +111,32 @@
   letter-spacing: 0.3px;
 }
 
+.googlePlayBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 28px;
+  padding: 12px 24px;
+  background: #000;
+  color: #FFF;
+  border-radius: 4px;
+  text-decoration: none;
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 500;
+  transition: opacity 0.2s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.googlePlayBtn:hover {
+  opacity: 0.9;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+.googlePlayText {
+  line-height: 24px;
+}
+
 .note {
   font-family: var(--font-mono);
   font-size: 11.5px;

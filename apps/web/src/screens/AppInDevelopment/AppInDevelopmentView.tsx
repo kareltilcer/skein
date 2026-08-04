@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import SkeinLogo from '../../components/ui/SkeinLogo'
+import GooglePlayIcon from '../../components/ui/GooglePlayIcon'
 import s from './AppInDevelopmentView.module.css'
 
 const GOOGLE_PLAY_URL = '#'
@@ -27,13 +28,13 @@ export default function AppInDevelopmentView() {
         </p>
 
         <a
-          className={s.cta}
+          className={s.googlePlayBtn}
           href={GOOGLE_PLAY_URL}
           target="_blank"
           rel="noreferrer noopener"
         >
-          <span className={s.ctaLabel}>Get it on</span>
-          <span className={s.ctaName}>Google Play</span>
+          <GooglePlayIcon size={24} />
+          <span className={s.googlePlayText}>Get it on Google Play</span>
         </a>
 
         <p className={s.note}>no account needed · ever</p>
