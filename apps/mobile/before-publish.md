@@ -113,7 +113,7 @@ Chrome + the app's own embedded fonts); rerun with `node build.mjs`.
 
 ## Nice-to-haves before 1.0
 
-- **Crash reporting** (Sentry/Bugsnag). Zero observability if a release crashes for a user.
+- (resolved) **Crash reporting** (Sentry/Bugsnag). Zero observability if a release crashes for a user.
 - **In-app version display** in Settings — helps users report bugs against a known build.
 - **A real about/legal screen** linking to the privacy policy from inside the app — Play reviewers sometimes check.
 
