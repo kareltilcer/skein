@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom'
 import SkeinLogo from '../../components/ui/SkeinLogo'
 import s from './AppInDevelopmentView.module.css'
 
-const GOOGLE_PLAY_URL = '#'
+// const GOOGLE_PLAY_URL = '#'
 
 export default function AppInDevelopmentView() {
   return (
@@ -26,7 +26,7 @@ export default function AppInDevelopmentView() {
           In the meantime, you can cast on with the mobile app:
         </p>
 
-        <a
+        {/* <a
           className={s.cta}
           href={GOOGLE_PLAY_URL}
           target="_blank"
@@ -42,7 +42,11 @@ export default function AppInDevelopmentView() {
             <span className={s.ctaLabel}>Get it on</span>
             <span className={s.ctaName}>Google Play</span>
           </span>
-        </a>
+        </a> */}
+
+        <p className={s.comingSoon}>
+          Mobile app coming soon — we're weaving the final threads.
+        </p>
 
         <p className={s.note}>no account needed · ever</p>
       </section>

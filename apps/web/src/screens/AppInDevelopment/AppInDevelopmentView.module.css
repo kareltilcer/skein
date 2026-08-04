@@ -78,6 +78,16 @@
   margin: 18px auto 0;
 }
 
+.comingSoon {
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--color-inkMute);
+  font-style: italic;
+  max-width: 40ch;
+  margin: 18px auto 0;
+}
+
 .cta {
   display: inline-flex;
   align-items: center;
