@@ -32,7 +32,7 @@ export default function AppInDevelopmentView() {
           target="_blank"
           rel="noreferrer noopener"
         >
-          <svg className={s.ctaIcon} viewBox="0 0 40 40" aria-hidden>
+          <svg className={s.ctaIcon} viewBox="0 0 24 24" aria-hidden>
             <path d="M8 5v14l11-7z" fill="#4285F4"/>
             <path d="M10 8.5l6 3-6 3v-6z" fill="#0F9D58"/>
             <path d="M10 11.5l6 3-6 3v-6z" fill="#F4B400"/>
