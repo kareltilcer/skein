@@ -45,7 +45,7 @@ function RootLayout() {
     if (!languageInitialized) setLanguage(detectSystemLanguage())
   }, [settingsHydrated, languageInitialized, setLanguage])
 
-  const [fontsLoaded] = useFonts({
+  const [fontsLoaded, fontError] = useFonts({
     Caprasimo_400Regular,
     NotoSerifDisplay_700Bold,
     DMSans_400Regular,
@@ -54,12 +54,16 @@ function RootLayout() {
     DMSans_700Bold,
     DMMono_400Regular,
   })
+  // Never gate the splash on a *successful* font load alone: if a bundled font
+  // fails to load, fontsLoaded would stay false forever and the app would hang
+  // on the splash screen. Proceed on error too (falls back to system fonts).
+  const fontsReady = fontsLoaded || !!fontError
 
   React.useEffect(() => {
-    if (fontsLoaded && settingsHydrated) SplashScreen.hideAsync()
-  }, [fontsLoaded, settingsHydrated])
+    if (fontsReady && settingsHydrated) SplashScreen.hideAsync()
+  }, [fontsReady, settingsHydrated])
 
-  if (!fontsLoaded || !settingsHydrated) return null
+  if (!fontsReady || !settingsHydrated) return null
 
   return (
     <ThemeProvider theme={theme}>
